@@ -1,181 +1,322 @@
-{% extends 'base.html' %} {% block content %}
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
+    <div>
+        <h2 class="h2 fw-bold text-dark">Dashboard</h2>
+        <p class="text-muted small">
+            Welcome back, <strong>{{ user.username }}</strong> 
+            <span class="badge bg-secondary rounded-pill ms-2" style="font-weight: 400; font-size: 0.8rem;">
+                {{ user.get_role_display }}
+            </span>
+        </p>
+    </div>
+</div>
+
+<!-- ========================== -->
+<!-- SECTION 0: GLOBAL SALES STATS (Visible to Everyone) -->
+<!-- ========================== -->
 <div class="row mb-4">
-  <div class="col-md-12">
-    <h2>
-      Dashboard: {{ user.username }}
-      <span class="badge bg-secondary">{{ user.get_role_display }}</span>
-    </h2>
-  </div>
+    <div class="col-12">
+        <h6 class="text-uppercase text-secondary small fw-bold mb-3">Today's Sales Breakdown (Revenue)</h6>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 border-start border-4 border-success">
+            <div class="card-body">
+                <small class="text-muted text-uppercase">Cash</small>
+                <h4 class="mb-0 fw-bold text-dark">${{ payment_stats.cash }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 border-start border-4 border-info">
+            <div class="card-body">
+                <small class="text-muted text-uppercase">Online / Transfer</small>
+                <h4 class="mb-0 fw-bold text-dark">${{ payment_stats.online }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 border-start border-4 border-warning">
+            <div class="card-body">
+                <small class="text-muted text-uppercase">Card</small>
+                <h4 class="mb-0 fw-bold text-dark">${{ payment_stats.card }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 bg-dark text-white">
+            <div class="card-body">
+                <small class="text-white-50 text-uppercase">Total Sales</small>
+                <h4 class="mb-0 fw-bold text-white">${{ payment_stats.total }}</h4>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- ========================== -->
 <!-- SECTION 1: FINANCIALS & AI -->
 <!-- ========================== -->
 <div class="row mb-4">
-  <!-- CASE A: IF OWNER (Show List of Investors and Debts) -->
-  {% if is_owner %}
-  <div class="col-md-12">
-    <div class="card border-warning">
-      <div class="card-header bg-warning text-dark">
-        <strong>Financials: Payable Accounts</strong>
-      </div>
-      <div class="card-body">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Investor</th>
-              <th>Total Sales Share</th>
-              <th>Already Paid</th>
-              <th>Balance Due</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for f in financials %}
-            <tr>
-              <td>{{ f.investor.username }}</td>
-              <!-- REMOVED floatform HERE -->
-              <td>${{ f.earned }}</td>
-              <td>${{ f.paid }}</td>
-              <td
-                class="fw-bold {% if f.due > 0 %}text-danger{% else %}text-success{% endif %}"
-              >
-                ${{ f.due }}
-              </td>
-              <td>
-                <a
-                  href="{% url 'pay_investor' f.investor.id %}"
-                  class="btn btn-sm btn-outline-dark"
-                  >Record Payment</a
-                >
-              </td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="5">No investor data found.</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- CASE B: IF INVESTOR (Show My Earnings & ML Prediction) -->
-  {% else %}
-  <div class="col-md-8">
-    <div class="card border-info h-100">
-      <div class="card-header bg-info text-white">My Wallet</div>
-      <div class="card-body">
-        <div class="row text-center h-100 align-items-center">
-          <div class="col">
-            <h5>Total Earnings</h5>
-            <!-- REMOVED floatform HERE -->
-            <p class="fs-4">${{ total_earned }}</p>
-          </div>
-          <div class="col">
-            <h5>Received</h5>
-            <!-- REMOVED floatform HERE -->
-            <p class="fs-4">${{ total_paid }}</p>
-          </div>
-          <div class="col">
-            <h5>Pending Payout</h5>
-            <!-- REMOVED floatform HERE -->
-            <p class="fs-4 text-danger fw-bold">${{ due }}</p>
-          </div>
+    
+    <!-- CASE A: IF OWNER -->
+    {% if is_owner %}
+    <div class="col-12 mb-4">
+        <!-- OWNER INCOME CARD -->
+        <div class="card bg-success text-white shadow-sm border-0">
+            <div class="card-body d-flex justify-content-between align-items-center p-4">
+                <div>
+                    <h6 class="text-uppercase text-white-50 mb-1">My Facility Net Income</h6>
+                    <h2 class="display-6 fw-bold mb-0">${{ owner_net_income }}</h2>
+                    <small class="text-white-50">Total profit share accumulated from all sales.</small>
+                </div>
+                <i class="bi bi-bank display-3 text-white-50"></i>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
-  <div class="col-md-4">
-    <div class="card border-primary h-100">
-      <div class="card-header bg-primary text-white">AI Analytics 🤖</div>
-      <div
-        class="card-body text-center d-flex flex-column justify-content-center"
-      >
-        <p class="mb-1">Predicted Top Product for Next Month:</p>
-        <h3 class="text-primary">{{ predicted_product }}</h3>
-      </div>
+
+    <div class="col-md-12">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white border-bottom-0 pt-3 pb-2">
+                <h5 class="m-0 text-primary">
+                    <i class="bi bi-wallet2 me-2"></i>Payable Accounts (Investors)
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr class="text-secondary small text-uppercase">
+                                <th class="ps-4">Investor</th>
+                                <th>Total Share</th>
+                                <th>Already Paid</th>
+                                <th>Balance Due</th>
+                                <th class="text-end pe-4">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for f in financials %}
+                            <tr>
+                                <td class="ps-4 fw-bold text-dark">{{ f.investor.username }}</td>
+                                <td class="text-secondary">${{ f.earned }}</td>
+                                <td class="text-success">${{ f.paid }}</td>
+                                <td>
+                                    {% if f.due > 0 %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-2 rounded-pill">
+                                            ${{ f.due }} Due
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">
+                                            Settled
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-4">
+                                    <a href="{% url 'pay_investor' f.investor.id %}" class="btn btn-sm btn-outline-dark rounded-pill px-3">
+                                        <i class="bi bi-cash-stack me-1"></i> Pay
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No investor data found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-  {% endif %}
+
+    <!-- CASE B: IF INVESTOR -->
+    {% else %}
+    <div class="col-12">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="bg-success bg-opacity-10 p-3 rounded-circle me-3">
+                            <i class="bi bi-piggy-bank-fill text-success fs-3"></i>
+                        </div>
+                        <div>
+                            <p class="text-muted small text-uppercase mb-0 fw-bold">Total Earnings</p>
+                            <h3 class="mb-0 fw-bold text-dark">${{ total_earned }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="bg-info bg-opacity-10 p-3 rounded-circle me-3">
+                            <i class="bi bi-check-circle-fill text-info fs-3"></i>
+                        </div>
+                        <div>
+                            <p class="text-muted small text-uppercase mb-0 fw-bold">Received</p>
+                            <h3 class="mb-0 fw-bold text-dark">${{ total_paid }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="bg-warning bg-opacity-10 p-3 rounded-circle me-3">
+                            <i class="bi bi-hourglass-split text-warning fs-3"></i>
+                        </div>
+                        <div>
+                            <p class="text-muted small text-uppercase mb-0 fw-bold">Pending Payout</p>
+                            <h3 class="mb-0 fw-bold text-danger">${{ due }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-12 mt-4">
+        <div class="card shadow-sm border-0 bg-primary text-white" style="background: linear-gradient(45deg, #4e54c8, #8f94fb);">
+            <div class="card-body d-flex align-items-center justify-content-between px-4 py-3">
+                <div>
+                    <h6 class="text-uppercase text-white-50 mb-1" style="font-size: 0.8rem; letter-spacing: 1px;">AI Market Intelligence 🤖</h6>
+                    <h3 class="mb-0">Top Trending Product: <span class="fw-bold text-warning">{{ predicted_product }}</span></h3>
+                    <small class="text-white-50">Based on sales velocity from the last 30 days.</small>
+                </div>
+                <i class="bi bi-graph-up-arrow display-4 text-white-50"></i>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- ========================== -->
 <!-- SECTION 2: INVENTORY & SALES -->
 <!-- ========================== -->
-<div class="row">
-  <!-- INVENTORY TABLE -->
-  <div class="col-md-8">
-    <div class="card mb-4">
-      <div class="card-header bg-dark text-white">
-        {% if is_owner %}All Store Inventory{% else %}My Inventory{% endif %}
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-hover">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Stock</th>
-                <th>Price</th>
-                {% if is_owner %}
-                <th>Investor</th>
-                {% endif %}
-              </tr>
-            </thead>
-            <tbody>
-              {% for p in products %}
-              <!-- Highlight RED if Low Stock -->
-              <tr
-                class="{% if p.quantity <= p.low_stock_threshold %}table-danger{% endif %}"
-              >
-                <td>{{ p.product_id }}</td>
-                <td>{{ p.name }}</td>
-                <td>
-                  {{ p.quantity }} {% if p.quantity <= p.low_stock_threshold %}
-                  <span class="badge bg-danger">LOW</span>
-                  {% endif %}
-                </td>
-                <td>${{ p.selling_price }}</td>
-                {% if is_owner %}
-                <td>{{ p.investor.username }}</td>
-                {% endif %}
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="5">No products found.</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
+<div class="row g-4">
+    <!-- INVENTORY TABLE -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white border-bottom-0 pt-4 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                
+                <!-- Title -->
+                <h5 class="mb-0 fw-bold text-dark">
+                    <i class="bi bi-box-seam me-2 text-secondary"></i>
+                    {% if is_owner %}Full Inventory{% else %}My Inventory{% endif %}
+                </h5>
 
-  <!-- RECENT SALES LOG -->
-  <div class="col-md-4">
-    <div class="card">
-      <div class="card-header bg-success text-white">Recent Sales Activity</div>
-      <ul class="list-group list-group-flush">
-        {% for sale in recent_sales %}
-        <li class="list-group-item">
-          <div class="d-flex w-100 justify-content-between">
-            <h6 class="mb-1">{{ sale.product.name }}</h6>
-            <small>{{ sale.date|date:"M d" }}</small>
-          </div>
-          <p class="mb-1">
-            Qty: {{ sale.quantity }} | Total: ${{ sale.total_amount }}
-          </p>
-          <small class="text-muted">Sold by {{ sale.sold_by.username }}</small>
-        </li>
-        {% empty %}
-        <li class="list-group-item">No sales recorded yet.</li>
-        {% endfor %}
-      </ul>
+                <!-- ACTIONS: Filter & Add Button -->
+                <div class="d-flex align-items-center gap-2">
+                    
+                    <!-- FILTER DROPDOWN (Inside Header) -->
+                    <form method="GET" class="d-flex align-items-center">
+                        <span class="text-muted small me-2">Filter:</span>
+                        <select name="investor" class="form-select form-select-sm border-secondary text-secondary shadow-none" style="max-width: 150px;" onchange="this.form.submit()">
+                            <option value="all" {% if current_filter == 'all' %}selected{% endif %}>Show All</option>
+                            {% for seller in sellers_list %}
+                            <option value="{{ seller.id }}" {% if current_filter == seller.id %}selected{% endif %}>
+                                {{ seller.username }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+
+                    <!-- ADD BUTTON -->
+                    <a href="{% url 'add_product' %}" class="btn btn-sm btn-primary rounded-pill px-3">
+                        <i class="bi bi-plus-lg"></i> Add New
+                    </a>
+                </div>
+            </div>
+
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr class="text-secondary small text-uppercase">
+                                <th class="ps-4 py-3">ID</th>
+                                <th>Name</th>
+                                <th>Stock Status</th>
+                                <th>Price</th>
+                                {% if is_owner %}<th>Owner</th>{% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in products %}
+                            <tr class="{% if p.quantity <= p.low_stock_threshold %}bg-danger bg-opacity-10{% endif %}">
+                                <td class="ps-4 fw-bold text-secondary">{{ p.product_id }}</td>
+                                <td class="fw-bold text-dark">{{ p.name }}</td>
+                                <td>
+                                    {% if p.quantity <= p.low_stock_threshold %}
+                                        <span class="badge rounded-pill bg-danger text-white px-2">
+                                            {{ p.quantity }} (Low)
+                                        </span>
+                                    {% else %}
+                                        <span class="badge rounded-pill bg-success bg-opacity-10 text-success px-2 border border-success border-opacity-25">
+                                            {{ p.quantity }} In Stock
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>${{ p.selling_price }}</td>
+                                {% if is_owner %}
+                                    <td><small class="text-muted"><i class="bi bi-person me-1"></i>{{ p.investor.username }}</small></td>
+                                {% endif %}
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center py-4 text-muted">No products found.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
+
+    <!-- RECENT SALES LOG -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white border-bottom-0 pt-4 px-4">
+                <h5 class="mb-0 fw-bold text-dark">
+                    <i class="bi bi-activity me-2 text-secondary"></i>Recent Sales
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for sale in recent_sales %}
+                    <li class="list-group-item border-0 px-4 py-3 d-flex align-items-center">
+                        <div class="bg-light rounded-circle p-2 me-3 text-secondary">
+                            <i class="bi bi-cart-check"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 fw-bold text-dark">{{ sale.product.name }}</h6>
+                                <span class="badge bg-light text-muted border text-dark">{{ sale.date|date:"M d" }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1">
+                                <small class="text-muted">Qty: {{ sale.quantity }}</small>
+                                <span class="fw-bold text-success">+ ${{ sale.total_amount }}</span>
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                                Sold by {{ sale.sold_by.username }}
+                            </small>
+                        </div>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item border-0 text-center py-5 text-muted">
+                        <i class="bi bi-cart-x display-6 d-block mb-3 opacity-25"></i>
+                        No sales recorded yet.
+                    </li>
+                    {% endfor %}
+                </ul>
+                <div class="card-footer bg-white border-0 text-center pb-3">
+                    <a href="{% url 'sales_history' %}" class="text-decoration-none small text-primary fw-bold">
+                        View All History <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

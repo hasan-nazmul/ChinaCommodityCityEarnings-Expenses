@@ -1,32 +1,284 @@
-{% extends 'base.html' %} {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6 text-center">
-    <h2 class="mb-4">POS Terminal</h2>
-    <div class="card shadow">
-      <div class="card-body">
-        <form method="POST">
-          {% csrf_token %}
-          <div class="mb-3">
-            <label>Product ID / Name</label>
-            {{ form.product_id_search }}
-          </div>
-          <div class="row">
-            <div class="col">
-              <label>Quantity</label>
-              {{ form.quantity }}
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <!-- LEFT: POS CART -->
+    <div class="col-lg-8 mb-4">
+        <div class="card shadow-lg border-0 h-100">
+            <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-cart4 me-2"></i>New Transaction</h5>
+                <a href="{% url 'customer_list' %}" class="btn btn-sm btn-outline-light">
+                    <i class="bi bi-people-fill"></i> Customers
+                </a>
             </div>
-            <div class="col">
-              <label>Payment</label>
-              {{ form.payment_method }}
+            <div class="card-body p-4">
+                
+                <!-- 1. Customer Info -->
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <input type="text" id="custName" class="form-control" placeholder="Customer Name (Optional)">
+                    </div>
+                    <div class="col-md-6">
+                        <input type="text" id="custContact" class="form-control" placeholder="Mobile / Email (Optional)">
+                    </div>
+                </div>
+
+                <!-- 2. Product Scanner -->
+                <div class="input-group input-group-lg mb-4">
+                    <span class="input-group-text bg-light"><i class="bi bi-upc-scan"></i></span>
+                    <input type="text" id="productInput" class="form-control border-start-0 fw-bold" placeholder="Scan ID or Type Name & Hit Enter" autofocus>
+                    <button class="btn btn-primary" onclick="lookupProduct()">Add</button>
+                </div>
+                <div id="scanError" class="text-danger fw-bold small mb-2"></div>
+
+                <!-- 3. Cart Table -->
+                <div class="table-responsive mb-4 border rounded">
+                    <table class="table table-striped align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Item</th>
+                                <th width="15%">Price</th>
+                                <th width="15%">Qty</th>
+                                <th width="15%" class="text-end">Total</th>
+                                <th width="5%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="cartTableBody">
+                            <!-- JS will inject rows here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 4. Totals & Discount -->
+                <div class="row justify-content-end text-end">
+                    <div class="col-md-5">
+                        <div class="d-flex justify-content-between mb-2 align-items-center">
+                            <span>Subtotal:</span>
+                            <span class="fw-bold fs-5" id="subtotalDisplay">$0.00</span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mb-2 align-items-center">
+                            <span class="text-danger">Discount (%):</span>
+                            <input type="number" id="discountPercent" class="form-control form-control-sm w-25 text-end text-danger fw-bold" value="0" min="0" max="100" onchange="updateTotals()">
+                        </div>
+
+                        <div class="d-flex justify-content-between border-top pt-2">
+                            <span class="fs-4 fw-bold text-dark">Total:</span>
+                            <span class="fs-4 fw-bold text-success" id="finalTotalDisplay">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- 5. Actions -->
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <select id="paymentMethod" class="form-select form-select-lg fw-bold">
+                            <option value="CASH">CASH</option>
+                            <option value="CARD">CARD</option>
+                            <option value="ONLINE">ONLINE</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <button onclick="submitSale()" class="btn btn-success btn-lg w-100 fw-bold shadow-sm">
+                            <i class="bi bi-check-circle-fill me-2"></i> COMPLETE SALE
+                        </button>
+                    </div>
+                </div>
+
             </div>
-          </div>
-          <br />
-          <button type="submit" class="btn btn-success w-100 btn-lg">
-            COMPLETE SALE
-          </button>
-        </form>
-      </div>
+        </div>
     </div>
-  </div>
+
+    <!-- RIGHT: HISTORY -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white pt-3 pb-2 border-bottom-0">
+                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-clock-history me-2"></i>Recent Transactions</h6>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% if recent_sales %}
+                        {% for sale in recent_sales %}
+                        <li class="list-group-item px-4 py-3 border-0 border-bottom">
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold">{{ sale.product.name }}</span>
+                                <span class="badge bg-light text-dark">{{ sale.date|date:"H:i" }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mt-1">
+                                <small class="text-muted">x{{ sale.quantity }} 
+                                    {% if sale.discount_percent > 0 %}<span class="text-danger">(-{{sale.discount_percent}}%)</span>{% endif %}
+                                </small>
+                                <span class="fw-bold text-success">${{ sale.total_amount }}</span>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    {% else %}
+                        <li class="list-group-item text-center py-5 text-muted">Empty session.</li>
+                    {% endif %}
+                </ul>
+                <div class="card-footer bg-white border-0 text-center pb-3">
+                    <a href="{% url 'sales_history' %}" class="small fw-bold">View Full Ledger</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- JAVASCRIPT LOGIC -->
+<script>
+    let cart = [];
+
+    // 1. Handle Enter Key on Input
+    document.getElementById('productInput').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') lookupProduct();
+    });
+
+    // 2. Lookup Product from Server
+    function lookupProduct() {
+        const input = document.getElementById('productInput');
+        const query = input.value.trim();
+        const errorDiv = document.getElementById('scanError');
+        
+        if (!query) return;
+
+        fetch(`/api/product-lookup/?q=${query}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.found) {
+                    addToCart(data);
+                    input.value = '';
+                    errorDiv.innerText = '';
+                } else {
+                    errorDiv.innerText = '❌ Product not found';
+                }
+            });
+    }
+
+    // 3. Add to Cart Array
+    function addToCart(product) {
+        // Check if exists, just increase qty
+        const existing = cart.find(item => item.id === product.id);
+        if (existing) {
+            if (existing.qty < product.stock) {
+                existing.qty++;
+            } else {
+                alert("Not enough stock!");
+            }
+        } else {
+            if (product.stock > 0) {
+                cart.push({ ...product, qty: 1 });
+            } else {
+                alert("Out of stock!");
+            }
+        }
+        renderCart();
+    }
+
+    // 4. Render Table
+    function renderCart() {
+        const tbody = document.getElementById('cartTableBody');
+        tbody.innerHTML = '';
+        let subtotal = 0;
+
+        cart.forEach((item, index) => {
+            const total = item.price * item.qty;
+            subtotal += total;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>
+                        <div class="fw-bold text-dark">${item.name}</div>
+                        <small class="text-muted">${item.custom_id}</small>
+                    </td>
+                    <td>$${item.price.toFixed(2)}</td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm w-75" value="${item.qty}" min="1" max="${item.stock}" onchange="updateQty(${index}, this.value)">
+                    </td>
+                    <td class="text-end fw-bold">$${total.toFixed(2)}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm text-danger" onclick="removeItem(${index})"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('subtotalDisplay').innerText = `$${subtotal.toFixed(2)}`;
+        updateTotals(subtotal);
+    }
+
+    // 5. Update Totals with Discount
+    function updateTotals(subtotal = null) {
+        if (subtotal === null) {
+            // Recalculate if called from discount input change
+            subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+        }
+        
+        const discPercent = parseFloat(document.getElementById('discountPercent').value) || 0;
+        const discountAmount = subtotal * (discPercent / 100);
+        const final = subtotal - discountAmount;
+
+        document.getElementById('finalTotalDisplay').innerText = `$${final.toFixed(2)}`;
+    }
+
+    // 6. Helper Functions
+    function updateQty(index, newQty) {
+        newQty = parseInt(newQty);
+        if (newQty > 0 && newQty <= cart[index].stock) {
+            cart[index].qty = newQty;
+            renderCart();
+        } else {
+            alert("Invalid Quantity or Low Stock");
+            renderCart(); // Reset input
+        }
+    }
+
+    function removeItem(index) {
+        cart.splice(index, 1);
+        renderCart();
+    }
+
+    // 7. Submit to Server
+    function submitSale() {
+        if (cart.length === 0) {
+            alert("Cart is empty!");
+            return;
+        }
+
+        const payload = {
+            items: cart.map(i => ({ product_id: i.id, quantity: i.qty })),
+            customer: {
+                name: document.getElementById('custName').value,
+                contact: document.getElementById('custContact').value
+            },
+            payment_method: document.getElementById('paymentMethod').value,
+            discount_percent: document.getElementById('discountPercent').value
+        };
+
+        // CSRF Token logic
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch('{% url "sell_product" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload(); // Refresh to show success msg and clear cart
+            } else {
+                alert("Error: " + data.message);
+            }
+        });
+    }
+</script>
+
+<!-- Hidden CSRF Input for JS to grab -->
+{% csrf_token %}
+
 {% endblock %}

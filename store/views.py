@@ -1,81 +1,126 @@
+import json
+import uuid
+from decimal import Decimal
+from datetime import timedelta
+from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Q
-from .models import Product, Sale
-from .forms import ProductForm, SaleForm
-from django.db.models import Sum, F
-from .analytics import get_predicted_top_product
-from .models import *
+from django.db.models import Q, Sum, Count, Max
+from django.db import transaction
+from django.http import JsonResponse
 
+from .models import Product, Sale, User, Payout, Customer
+from .forms import ProductForm
+from .analytics import get_predicted_top_product
+
+# ==========================================
+# 1. DASHBOARD & ANALYTICS
+# ==========================================
 @login_required
 def dashboard(request):
     user = request.user
     
-    if user.role == 'OWNER':
-        products = Product.objects.all()
-        sales_history = Sale.objects.all().order_by('-date')[:20]
-        
-        investors = User.objects.filter(role='INVESTOR')
-        financials = []
-        
-        for inv in investors:
-            total_earned = Sale.objects.filter(product__investor=inv).aggregate(
-                total=Sum('investor_profit_amount')
-            )['total'] or 0
-            
-            total_paid = inv.payouts.aggregate(total=Sum('amount'))['total'] or 0
-            
-            due = total_earned - total_paid
-            
-            financials.append({
-                'investor': inv,
-                # ROUND NUMBERS HERE IN PYTHON
-                'earned': round(total_earned, 2),
-                'paid': round(total_paid, 2),
-                'due': round(due, 2)
-            })
-            
-        context = {
-            'products': products,
-            'recent_sales': sales_history,
-            'financials': financials,
-            'is_owner': True
-        }
+    # 1. Handle Filters
+    filter_investor_id = request.GET.get('investor')
+    
+    # 2. Base Queries (Prepare them, but DO NOT slice yet)
+    products_query = Product.objects.all()
+    sales_query = Sale.objects.all().order_by('-date')
+    
+    # 3. Apply Filter (BEFORE slicing)
+    if filter_investor_id and filter_investor_id != 'all':
+        products_query = products_query.filter(investor_id=filter_investor_id)
+        sales_query = sales_query.filter(product__investor_id=filter_investor_id)
 
-    else:
-        products = Product.objects.filter(investor=user)
-        sales_history = Sale.objects.filter(product__investor=user).order_by('-date')[:20]
-        
-        predicted_product = get_predicted_top_product(user)
-        
-        total_earned = Sale.objects.filter(product__investor=user).aggregate(
-            total=Sum('investor_profit_amount')
-        )['total'] or 0
-        
-        total_paid = user.payouts.aggregate(total=Sum('amount'))['total'] or 0
-        due = total_earned - total_paid
+    # 4. Now execute the queries and Slice
+    products = products_query
+    sales_history = sales_query[:50] # <--- Slice happens LAST
 
-        context = {
-            'products': products,
-            'recent_sales': sales_history,
-            'predicted_product': predicted_product,
-            # ROUND NUMBERS HERE IN PYTHON
-            'total_earned': round(total_earned, 2),
-            'total_paid': round(total_paid, 2),
-            'due': round(due, 2),
-            'is_owner': False
-        }
+    # 5. Global Stats
+    cash_income = Sale.objects.filter(payment_method='CASH').aggregate(t=Sum('total_amount'))['t'] or 0
+    card_income = Sale.objects.filter(payment_method='CARD').aggregate(t=Sum('total_amount'))['t'] or 0
+    online_income = Sale.objects.filter(payment_method='ONLINE').aggregate(t=Sum('total_amount'))['t'] or 0
+
+    payment_stats = {
+        'cash': round(cash_income, 2),
+        'card': round(card_income, 2),
+        'online': round(online_income, 2),
+        'total': round(cash_income + card_income + online_income, 2)
+    }
+
+    # 6. Financials
+    investors_only = User.objects.filter(role='INVESTOR')
+    financials = []
+    
+    for inv in investors_only:
+        t_earned = Sale.objects.filter(product__investor=inv).aggregate(total=Sum('investor_profit_amount'))['total'] or 0
+        t_paid = inv.payouts.aggregate(total=Sum('amount'))['total'] or 0
+        t_due = t_earned - t_paid
+        
+        financials.append({
+            'investor': inv,
+            'earned': round(t_earned, 2),
+            'paid': round(t_paid, 2),
+            'due': round(t_due, 2)
+        })
+
+    # 7. Dropdown List
+    all_sellers = User.objects.filter(role__in=['OWNER', 'INVESTOR']).order_by('username')
+
+    # 8. Owner Income
+    owner_net_income = Sale.objects.aggregate(total=Sum('owner_profit_amount'))['total'] or 0
+
+    # 9. Personal Wallet
+    my_earned = 0
+    my_paid = 0
+    my_due = 0
+    my_predicted_product = "N/A"
+
+    if user.role == 'INVESTOR':
+        my_earned = Sale.objects.filter(product__investor=user).aggregate(total=Sum('investor_profit_amount'))['total'] or 0
+        my_paid = user.payouts.aggregate(total=Sum('amount'))['total'] or 0
+        my_due = my_earned - my_paid
+        my_predicted_product = get_predicted_top_product(user)
+
+    context = {
+        'products': products,
+        'recent_sales': sales_history,
+        'financials': financials,
+        'owner_net_income': round(owner_net_income, 2),
+        'payment_stats': payment_stats,
+        'sellers_list': all_sellers,
+        'current_filter': int(filter_investor_id) if filter_investor_id and filter_investor_id != 'all' else 'all',
+        'is_owner': user.role == 'OWNER',
+        'total_earned': round(my_earned, 2),
+        'total_paid': round(my_paid, 2),
+        'due': round(my_due, 2),
+        'predicted_product': my_predicted_product
+    }
 
     return render(request, 'store/dashboard.html', context)
 
+# ==========================================
+# 2. INVENTORY MANAGEMENT
+# ==========================================
 @login_required
 def add_product(request):
     if request.method == 'POST':
         form = ProductForm(request.POST)
         if form.is_valid():
             product = form.save(commit=False)
-            product.investor = request.user  # Assign current user as owner
+            product.investor = request.user
+            
+            if request.user.role == 'OWNER':
+                product.owner_split_percent = Decimal(100)
+                product.investor_split_percent = Decimal(0)
+            else:
+                if product.owner_split_percent > 100:
+                    product.owner_split_percent = Decimal(100)
+                product.investor_split_percent = Decimal(100) - product.owner_split_percent
+            
             product.save()
             messages.success(request, f"Product {product.product_id} added successfully!")
             return redirect('dashboard')
@@ -83,119 +128,199 @@ def add_product(request):
         form = ProductForm()
     return render(request, 'store/add_product.html', {'form': form})
 
+
+# ==========================================
+# 3. SALES & CART SYSTEM
+# ==========================================
+@login_required
+def api_get_product(request):
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse({'error': 'Empty query'}, status=400)
+        
+    product = Product.objects.filter(
+        Q(product_id__iexact=query) | Q(name__iexact=query)
+    ).first()
+    
+    if product:
+        return JsonResponse({
+            'found': True,
+            'id': product.id,
+            'name': product.name,
+            'price': float(product.selling_price),
+            'stock': product.quantity,
+            'custom_id': product.product_id
+        })
+    return JsonResponse({'found': False})
+
 @login_required
 def sell_product(request):
-    if request.method == 'POST':
-        form = SaleForm(request.POST)
-        if form.is_valid():
-            query = form.cleaned_data['product_id_search']
-            qty = form.cleaned_data['quantity']
-            method = form.cleaned_data['payment_method']
-            
-            # Find product by Custom ID OR Name
-            product = Product.objects.filter(
-                Q(product_id__iexact=query) | Q(name__icontains=query)
-            ).first()
+    recent_sales = Sale.objects.order_by('-date')[:5]
 
-            if product:
-                if product.quantity >= qty:
-                    # Create Sale
-                    Sale.objects.create(
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            cart_items = data.get('items', [])
+            customer_info = data.get('customer', {})
+            payment_method = data.get('payment_method', 'CASH')
+            discount_percent = Decimal(data.get('discount_percent', 0))
+
+            if not cart_items:
+                return JsonResponse({'success': False, 'message': 'Cart is empty'})
+
+            trans_id = str(uuid.uuid4())[:8].upper()
+
+            customer_obj = None
+            c_contact = customer_info.get('contact')
+            c_name = customer_info.get('name')
+            
+            if c_contact:
+                customer_obj, created = Customer.objects.get_or_create(
+                    mobile=c_contact,
+                    defaults={'name': c_name or "Unknown"}
+                )
+                if not created and c_name:
+                    customer_obj.name = c_name
+                    customer_obj.save()
+
+            with transaction.atomic():
+                total_sale_val = 0
+                for item in cart_items:
+                    product = Product.objects.get(id=item['product_id'])
+                    qty = int(item['quantity'])
+                    
+                    if product.quantity < qty:
+                        raise ValueError(f"Not enough stock for {product.name}")
+
+                    sale = Sale.objects.create(
+                        transaction_id=trans_id,
                         product=product,
                         sold_by=request.user,
                         quantity=qty,
-                        payment_method=method
+                        discount_percent=discount_percent,
+                        payment_method=payment_method,
+                        customer=customer_obj,
+                        customer_name_text=c_name or "Walk-in",
+                        customer_contact=c_contact
                     )
-                    messages.success(request, f"Sold {qty} x {product.name}!")
-                    return redirect('sell_product') # Refresh page for next sale
-                else:
-                    messages.error(request, f"Not enough stock! Only {product.quantity} left.")
-            else:
-                messages.error(request, "Product not found.")
+                    total_sale_val += sale.total_amount
+
+                messages.success(request, f"✅ Transaction {trans_id} Complete! Total: ${round(total_sale_val, 2)}")
+                return JsonResponse({'success': True})
+
+        except ValueError as e:
+            return JsonResponse({'success': False, 'message': str(e)})
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': "Server Error: " + str(e)})
+
+    return render(request, 'store/sell.html', {'recent_sales': recent_sales})
+
+
+# ==========================================
+# 4. SALES HISTORY & LEDGER
+# ==========================================
+@login_required
+def sales_history(request):
+    # Open Visibility: Everyone starts with all sales
+    sales = Sale.objects.all().select_related('product', 'sold_by', 'customer').order_by('-date')
+
+    # Apply Investor Filter
+    filter_investor_id = request.GET.get('investor')
+    if filter_investor_id and filter_investor_id != 'all':
+        sales = sales.filter(product__investor_id=filter_investor_id)
+
+    filter_type = request.GET.get('filter')
+    today = timezone.now().date()
+
+    if filter_type == 'today':
+        sales = sales.filter(date__date=today)
+    elif filter_type == 'week':
+        start_date = today - timedelta(days=7)
+        sales = sales.filter(date__date__gte=start_date)
+    elif filter_type == 'month':
+        start_date = today - timedelta(days=30)
+        sales = sales.filter(date__date__gte=start_date)
+    elif filter_type == 'year':
+        start_date = today - timedelta(days=365)
+        sales = sales.filter(date__date__gte=start_date)
+    
+    total_revenue = sales.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    total_count = sales.count()
+    
+    # Dropdown List (Owner + Investors)
+    all_sellers = User.objects.filter(role__in=['OWNER', 'INVESTOR']).order_by('username')
+
+    return render(request, 'store/sales_history.html', {
+        'sales': sales,
+        'total_revenue': round(total_revenue, 2),
+        'total_count': total_count,
+        'filter_type': filter_type,
+        'sellers_list': all_sellers, # <--- NEW LIST
+        'current_filter': int(filter_investor_id) if filter_investor_id and filter_investor_id != 'all' else 'all',
+    })
+
+
+# ==========================================
+# 5. USER PROFILE & CUSTOMERS
+# ==========================================
+@login_required
+def profile(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Your password was successfully updated!')
+            return redirect('profile')
+        else:
+            messages.error(request, 'Please correct the error below.')
     else:
-        form = SaleForm()
+        form = PasswordChangeForm(request.user)
         
-    return render(request, 'store/sell.html', {'form': form})
+    return render(request, 'store/profile.html', {'form': form})
 
 @login_required
-def dashboard(request):
-    user = request.user
-    
-    # --- 1. DATA FOR OWNER ---
-    if user.role == 'OWNER':
-        products = Product.objects.all()
-        sales_history = Sale.objects.all().order_by('-date')[:20]
-        
-        # Calculate Payables (How much Owner owes Investors)
-        # We get all investors
-        investors = User.objects.filter(role='INVESTOR')
-        financials = []
-        
-        for inv in investors:
-            # Total money this investor *should* have received from sales
-            total_earned = Sale.objects.filter(product__investor=inv).aggregate(
-                total=Sum('investor_profit_amount')
-            )['total'] or 0
-            
-            # Total money owner has *actually* paid them
-            total_paid = inv.payouts.aggregate(total=Sum('amount'))['total'] or 0
-            
-            due = total_earned - total_paid
-            
-            financials.append({
-                'investor': inv,
-                'earned': total_earned,
-                'paid': total_paid,
-                'due': due
-            })
-            
-        context = {
-            'products': products,
-            'recent_sales': sales_history,
-            'financials': financials, # Pass financial data to template
-            'is_owner': True
-        }
+def customer_list(request):
+    sort_by = request.GET.get('sort', 'date') 
+    customers = Customer.objects.annotate(
+        total_spent=Sum('sales__total_amount'),
+        visit_count=Count('sales'),
+        last_visit=Max('sales__date')
+    )
 
-    # --- 2. DATA FOR INVESTOR ---
+    if sort_by == 'spent':
+        customers = customers.order_by('-total_spent')
+    elif sort_by == 'visits':
+        customers = customers.order_by('-visit_count')
     else:
-        products = Product.objects.filter(investor=user)
-        sales_history = Sale.objects.filter(product__investor=user).order_by('-date')[:20]
-        
-        # Get ML Prediction
-        predicted_product = get_predicted_top_product(user)
-        
-        # Get Financials for this specific user
-        total_earned = Sale.objects.filter(product__investor=user).aggregate(
-            total=Sum('investor_profit_amount')
-        )['total'] or 0
-        
-        total_paid = user.payouts.aggregate(total=Sum('amount'))['total'] or 0
-        due = total_earned - total_paid
+        customers = customers.order_by('-last_visit')
 
-        context = {
-            'products': products,
-            'recent_sales': sales_history,
-            'predicted_product': predicted_product, # Pass ML result
-            'total_earned': total_earned,
-            'total_paid': total_paid,
-            'due': due,
-            'is_owner': False
-        }
+    return render(request, 'store/customer_list.html', {
+        'customers': customers,
+        'current_sort': sort_by
+    })
 
-    return render(request, 'store/dashboard.html', context)
+@login_required
+def customer_profile(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    history = customer.sales.all().order_by('-date')
+    total_spent = history.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+    
+    return render(request, 'store/customer_profile.html', {
+        'customer': customer,
+        'history': history,
+        'total_spent': total_spent
+    })
 
 @login_required
 def pay_investor(request, investor_id):
     if request.user.role != 'OWNER':
         return redirect('dashboard')
-        
     investor = get_object_or_404(User, id=investor_id)
-    
     if request.method == 'POST':
         amount = request.POST.get('amount')
         if amount:
             Payout.objects.create(investor=investor, amount=amount)
             messages.success(request, f"Recorded payment of ${amount} to {investor.username}")
             return redirect('dashboard')
-            
     return render(request, 'store/pay_investor.html', {'investor': investor})

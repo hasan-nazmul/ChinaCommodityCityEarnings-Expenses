@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        
+        <!-- User Info Card -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-4 d-flex align-items-center">
+                <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                    <i class="bi bi-person-circle display-5 text-primary"></i>
+                </div>
+                <div>
+                    <h4 class="fw-bold mb-0">{{ user.username }}</h4>
+                    <span class="badge bg-secondary">{{ user.get_role_display }}</span>
+                    <p class="text-muted mt-1 mb-0"><small>Joined: {{ user.date_joined|date:"M d, Y" }}</small></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Change Password Card -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-shield-lock me-2"></i>Security Settings</h5>
+            </div>
+            <div class="card-body p-4">
+                <h6 class="mb-3">Change Password</h6>
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">{{ field.label }}</label>
+                        {{ field.errors }}
+                        <!-- Add Bootstrap class to the Django form field -->
+                        <div class="input-group">
+                            {{ field }} 
+                        </div>
+                        {% if field.help_text %}
+                        <div class="form-text small">{{ field.help_text }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+
+                    <button type="submit" class="btn btn-primary">Update Password</button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Simple script to add bootstrap classes to django form fields rendered in loop -->
+<script>
+    document.querySelectorAll('input').forEach(input => {
+        input.classList.add('form-control');
+    });
+</script>
+{% endblock %}

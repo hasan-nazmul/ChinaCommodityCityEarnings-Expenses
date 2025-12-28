@@ -1,17 +1,158 @@
 {% extends 'base.html' %} {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header">Add New Product</div>
-      <div class="card-body">
+  <div class="col-lg-8">
+    <div class="card shadow-sm border-0 rounded-3">
+      <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+        <h4 class="text-primary mb-0 fw-bold">
+          <i class="bi bi-box-seam-fill me-2"></i>Add New Product
+        </h4>
+        <p class="text-muted small mt-1">
+          Enter product details to add to your inventory.
+        </p>
+      </div>
+      <div class="card-body p-4">
         <form method="POST">
-          {% csrf_token %} {{ form.as_p }}
-          <button type="submit" class="btn btn-primary w-100">
-            Add Product
-          </button>
+          {% csrf_token %}
+
+          <!-- 1. General Info -->
+          <div class="mb-4">
+            <label
+              class="form-label fw-bold text-secondary text-uppercase small"
+              >Product Details</label
+            >
+            <div class="mb-3">
+              <label class="form-label">Product Name</label>
+              {{ form.name }}
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <label class="form-label">Initial Quantity</label>
+                {{ form.quantity }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Low Stock Alert at</label>
+                {{ form.low_stock_threshold }}
+              </div>
+            </div>
+          </div>
+
+          <hr class="text-muted opacity-25 my-4" />
+
+          <!-- 2. Financials -->
+          <div class="mb-4">
+            <label
+              class="form-label fw-bold text-secondary text-uppercase small"
+              >Pricing</label
+            >
+            <div class="row">
+              <div class="col-md-6">
+                <label class="form-label">Buying Price (Cost)</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light border-end-0">$</span>
+                  {{ form.buying_price }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Selling Price</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light border-end-0">$</span>
+                  {{ form.selling_price }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Profit Splits (HIDDEN IF OWNER) -->
+          {% if user.role != 'OWNER' %}
+          <div class="mb-4 bg-light p-4 rounded-3 border">
+            <label
+              class="form-label fw-bold text-secondary text-uppercase small mb-3"
+            >
+              <i class="bi bi-pie-chart-fill me-1"></i> Profit Distribution
+            </label>
+
+            <div class="row g-3 align-items-center">
+              <!-- User Input: Owner Share -->
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-dark"
+                  >Facility Owner Share</label
+                >
+                <div class="input-group">
+                  {{ form.owner_split_percent }}
+                  <span class="input-group-text bg-white fw-bold text-dark"
+                    >%</span
+                  >
+                </div>
+                <div class="form-text">Percentage taken by the shop owner.</div>
+              </div>
+
+              <!-- Read Only: Investor Share -->
+              <div class="col-md-6">
+                <label class="form-label fw-bold text-secondary"
+                  >Investor Share (You)</label
+                >
+                <div class="input-group">
+                  <input
+                    type="text"
+                    id="investor_share_display"
+                    class="form-control bg-white text-success fw-bold"
+                    value="-"
+                    readonly
+                  />
+                  <span class="input-group-text bg-white text-success fw-bold"
+                    >%</span
+                  >
+                </div>
+                <div class="form-text">
+                  Calculated automatically (100 - Owner).
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Submit Button -->
+          <div class="d-grid mt-4">
+            <button
+              type="submit"
+              class="btn btn-primary btn-lg shadow-sm fw-bold"
+            >
+              <i class="bi bi-check-lg me-2"></i> Save Product
+            </button>
+          </div>
         </form>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const ownerInput = document.getElementById('owner_share_input');
+    const investorDisplay = document.getElementById('investor_share_display');
+
+    function updateShare() {
+      if (!ownerInput) return; // Exit if owner is adding product (input doesn't exist)
+
+      let ownerVal = parseFloat(ownerInput.value);
+      if (isNaN(ownerVal)) ownerVal = 0;
+      if (ownerVal > 100) {
+        ownerVal = 100;
+        ownerInput.value = 100;
+      }
+      if (ownerVal < 0) {
+        ownerVal = 0;
+        ownerInput.value = 0;
+      }
+
+      let investorVal = 100 - ownerVal;
+      investorDisplay.value = investorVal.toFixed(2).replace(/\.00$/, '');
+    }
+
+    if (ownerInput) {
+      ownerInput.addEventListener('input', updateShare);
+      if (ownerInput.value) updateShare();
+    }
+  });
+</script>
 {% endblock %}
