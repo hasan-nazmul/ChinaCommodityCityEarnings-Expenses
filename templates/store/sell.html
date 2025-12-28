@@ -1,0 +1,32 @@
+{% extends 'base.html' %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 text-center">
+    <h2 class="mb-4">POS Terminal</h2>
+    <div class="card shadow">
+      <div class="card-body">
+        <form method="POST">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label>Product ID / Name</label>
+            {{ form.product_id_search }}
+          </div>
+          <div class="row">
+            <div class="col">
+              <label>Quantity</label>
+              {{ form.quantity }}
+            </div>
+            <div class="col">
+              <label>Payment</label>
+              {{ form.payment_method }}
+            </div>
+          </div>
+          <br />
+          <button type="submit" class="btn btn-success w-100 btn-lg">
+            COMPLETE SALE
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

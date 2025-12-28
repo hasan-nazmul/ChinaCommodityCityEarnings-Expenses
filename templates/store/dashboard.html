@@ -1,0 +1,181 @@
+{% extends 'base.html' %} {% block content %}
+<div class="row mb-4">
+  <div class="col-md-12">
+    <h2>
+      Dashboard: {{ user.username }}
+      <span class="badge bg-secondary">{{ user.get_role_display }}</span>
+    </h2>
+  </div>
+</div>
+
+<!-- ========================== -->
+<!-- SECTION 1: FINANCIALS & AI -->
+<!-- ========================== -->
+<div class="row mb-4">
+  <!-- CASE A: IF OWNER (Show List of Investors and Debts) -->
+  {% if is_owner %}
+  <div class="col-md-12">
+    <div class="card border-warning">
+      <div class="card-header bg-warning text-dark">
+        <strong>Financials: Payable Accounts</strong>
+      </div>
+      <div class="card-body">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Investor</th>
+              <th>Total Sales Share</th>
+              <th>Already Paid</th>
+              <th>Balance Due</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in financials %}
+            <tr>
+              <td>{{ f.investor.username }}</td>
+              <!-- REMOVED floatform HERE -->
+              <td>${{ f.earned }}</td>
+              <td>${{ f.paid }}</td>
+              <td
+                class="fw-bold {% if f.due > 0 %}text-danger{% else %}text-success{% endif %}"
+              >
+                ${{ f.due }}
+              </td>
+              <td>
+                <a
+                  href="{% url 'pay_investor' f.investor.id %}"
+                  class="btn btn-sm btn-outline-dark"
+                  >Record Payment</a
+                >
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5">No investor data found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CASE B: IF INVESTOR (Show My Earnings & ML Prediction) -->
+  {% else %}
+  <div class="col-md-8">
+    <div class="card border-info h-100">
+      <div class="card-header bg-info text-white">My Wallet</div>
+      <div class="card-body">
+        <div class="row text-center h-100 align-items-center">
+          <div class="col">
+            <h5>Total Earnings</h5>
+            <!-- REMOVED floatform HERE -->
+            <p class="fs-4">${{ total_earned }}</p>
+          </div>
+          <div class="col">
+            <h5>Received</h5>
+            <!-- REMOVED floatform HERE -->
+            <p class="fs-4">${{ total_paid }}</p>
+          </div>
+          <div class="col">
+            <h5>Pending Payout</h5>
+            <!-- REMOVED floatform HERE -->
+            <p class="fs-4 text-danger fw-bold">${{ due }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-primary h-100">
+      <div class="card-header bg-primary text-white">AI Analytics 🤖</div>
+      <div
+        class="card-body text-center d-flex flex-column justify-content-center"
+      >
+        <p class="mb-1">Predicted Top Product for Next Month:</p>
+        <h3 class="text-primary">{{ predicted_product }}</h3>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ========================== -->
+<!-- SECTION 2: INVENTORY & SALES -->
+<!-- ========================== -->
+<div class="row">
+  <!-- INVENTORY TABLE -->
+  <div class="col-md-8">
+    <div class="card mb-4">
+      <div class="card-header bg-dark text-white">
+        {% if is_owner %}All Store Inventory{% else %}My Inventory{% endif %}
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Stock</th>
+                <th>Price</th>
+                {% if is_owner %}
+                <th>Investor</th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in products %}
+              <!-- Highlight RED if Low Stock -->
+              <tr
+                class="{% if p.quantity <= p.low_stock_threshold %}table-danger{% endif %}"
+              >
+                <td>{{ p.product_id }}</td>
+                <td>{{ p.name }}</td>
+                <td>
+                  {{ p.quantity }} {% if p.quantity <= p.low_stock_threshold %}
+                  <span class="badge bg-danger">LOW</span>
+                  {% endif %}
+                </td>
+                <td>${{ p.selling_price }}</td>
+                {% if is_owner %}
+                <td>{{ p.investor.username }}</td>
+                {% endif %}
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5">No products found.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECENT SALES LOG -->
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header bg-success text-white">Recent Sales Activity</div>
+      <ul class="list-group list-group-flush">
+        {% for sale in recent_sales %}
+        <li class="list-group-item">
+          <div class="d-flex w-100 justify-content-between">
+            <h6 class="mb-1">{{ sale.product.name }}</h6>
+            <small>{{ sale.date|date:"M d" }}</small>
+          </div>
+          <p class="mb-1">
+            Qty: {{ sale.quantity }} | Total: ${{ sale.total_amount }}
+          </p>
+          <small class="text-muted">Sold by {{ sale.sold_by.username }}</small>
+        </li>
+        {% empty %}
+        <li class="list-group-item">No sales recorded yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
