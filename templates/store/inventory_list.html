@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-end">
+        <div>
+            <h3 class="fw-bold mb-0"><i class="bi bi-boxes me-2"></i>Master Inventory</h3>
+            <p class="text-muted small mb-0">Manage stocks, prices, and ownership.</p>
+        </div>
+        <div class="text-end d-none d-md-block">
+            <small class="text-uppercase text-muted fw-bold" style="font-size: 0.7rem;">Total Inventory Value</small>
+            <h4 class="fw-bold text-success mb-0">${{ total_value }}</h4>
+        </div>
+    </div>
+</div>
+
+<!-- ============================ -->
+<!-- ENHANCED SEARCH & FILTER BAR -->
+<!-- ============================ -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-3 bg-white rounded">
+        <form method="GET" class="row g-2 align-items-center">
+            
+            <!-- 1. Filter Dropdown -->
+            <div class="col-md-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-funnel-fill"></i></span>
+                    <select name="investor" class="form-select border-start-0 bg-light fw-bold text-secondary" onchange="this.form.submit()">
+                        <option value="all" {% if current_filter == 'all' %}selected{% endif %}>All Owners</option>
+                        {% for s in sellers %}
+                        <option value="{{ s.id }}" {% if current_filter == s.id %}selected{% endif %}>{{ s.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- 2. Search Box -->
+            <div class="col-md-7">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                    <input type="text" name="search" class="form-control border-start-0" 
+                           placeholder="Search by Product Name or ID..." 
+                           value="{{ search_query }}" autocomplete="off">
+                    <button type="submit" class="btn btn-dark">Search</button>
+                </div>
+            </div>
+
+            <!-- 3. Add New Button -->
+            <div class="col-md-2 text-end">
+                <a href="{% url 'add_product' %}" class="btn btn-primary w-100 shadow-sm">
+                    <i class="bi bi-plus-lg me-1"></i> Add New
+                </a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- ============================ -->
+<!-- INVENTORY TABLE -->
+<!-- ============================ -->
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr class="text-uppercase small text-secondary">
+                        <th class="ps-4 py-3">Product ID</th>
+                        <th>Product Details</th>
+                        <th>Owner</th>
+                        <th>Cost Price</th>
+                        <th>Selling Price</th>
+                        <th class="text-center">Stock Level</th>
+                        <th class="text-end pe-4">Est. Margin</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in products %}
+                    <tr>
+                        <!-- ID -->
+                        <td class="ps-4 fw-bold text-secondary font-monospace">
+                            #{{ p.product_id }}
+                        </td>
+
+                        <!-- Name -->
+                        <td>
+                            <span class="fw-bold text-dark fs-6">{{ p.name }}</span>
+                            <br>
+                            <small class="text-muted">Added: {{ p.created_at|date:"M d, Y" }}</small>
+                        </td>
+
+                        <!-- Owner -->
+                        <td>
+                            <span class="badge bg-light text-dark border">
+                                <i class="bi bi-person me-1"></i> {{ p.investor.username }}
+                            </span>
+                        </td>
+
+                        <!-- Cost (Hidden if needed, visible for now) -->
+                        <td class="text-muted">${{ p.buying_price }}</td>
+
+                        <!-- Sell Price -->
+                        <td class="fw-bold text-dark fs-5">${{ p.selling_price }}</td>
+
+                        <!-- Stock Status -->
+                        <td class="text-center">
+                            {% if p.quantity <= p.low_stock_threshold %}
+                                <span class="badge bg-danger text-white rounded-pill px-3 py-2">
+                                    {{ p.quantity }} Left (Low)
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 border border-success border-opacity-25">
+                                    {{ p.quantity }} In Stock
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Margin Calculation -->
+                        <td class="text-end pe-4">
+                            {% with profit=p.selling_price|add:"-"|add:p.buying_price %}
+                            <span class="fw-bold text-success">+${{ profit }}</span>
+                            {% endwith %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-box-seam display-4 d-block mb-3 opacity-25"></i>
+                            No products found matching your search.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer bg-white py-3">
+        <small class="text-muted">Showing {{ product_count }} items.</small>
+    </div>
+</div>
+{% endblock %}

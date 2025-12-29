@@ -15,6 +15,8 @@ from django.http import JsonResponse
 from .models import Product, Sale, User, Payout, Customer
 from .forms import ProductForm
 from .analytics import get_predicted_top_product
+import csv
+from django.http import HttpResponse
 
 # ==========================================
 # 1. DASHBOARD & ANALYTICS
@@ -324,3 +326,96 @@ def pay_investor(request, investor_id):
             messages.success(request, f"Recorded payment of ${amount} to {investor.username}")
             return redirect('dashboard')
     return render(request, 'store/pay_investor.html', {'investor': investor})
+
+@login_required
+def export_sales_csv(request):
+    # 1. Setup the CSV file
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="sales_report.csv"'
+    writer = csv.writer(response)
+    
+    # 2. Write the Header Row
+    writer.writerow(['Date', 'Transaction ID', 'Product', 'Sold By', 'Customer', 'Qty', 'Total Amount', 'Payment Method'])
+
+    # 3. Start with all sales
+    sales = Sale.objects.all().select_related('product', 'sold_by', 'customer').order_by('-date')
+
+    # --- APPLY FILTERS (Same logic as sales_history) ---
+    
+    # A. Filter by Investor/Seller
+    filter_investor_id = request.GET.get('investor')
+    if filter_investor_id and filter_investor_id != 'all':
+        sales = sales.filter(product__investor_id=filter_investor_id)
+
+    # B. Filter by Date Range
+    filter_type = request.GET.get('filter')
+    today = timezone.now().date()
+
+    if filter_type == 'today':
+        sales = sales.filter(date__date=today)
+    elif filter_type == 'week':
+        start_date = today - timedelta(days=7)
+        sales = sales.filter(date__date__gte=start_date)
+    elif filter_type == 'month':
+        start_date = today - timedelta(days=30)
+        sales = sales.filter(date__date__gte=start_date)
+    elif filter_type == 'year':
+        start_date = today - timedelta(days=365)
+        sales = sales.filter(date__date__gte=start_date)
+
+    # 4. Write the Data Rows
+    for sale in sales:
+        # Handle customer name logic safely
+        customer_name = sale.customer.name if sale.customer else (sale.customer_name_text or "Walk-in")
+        
+        writer.writerow([
+            sale.date.strftime("%Y-%m-%d %H:%M:%S"),
+            sale.transaction_id or "-",
+            sale.product.name,
+            sale.sold_by.username,
+            customer_name,
+            sale.quantity,
+            sale.total_amount,
+            sale.get_payment_method_display(),
+        ])
+
+    return response
+
+@login_required
+def inventory_list(request):
+    # 1. Start with all products
+    products = Product.objects.all().select_related('investor').order_by('-created_at')
+    
+    # 2. Get Parameters
+    search_query = request.GET.get('search', '').strip()
+    filter_investor = request.GET.get('investor', '')
+
+    # 3. Apply Search (Checks Name OR Product ID)
+    if search_query:
+        products = products.filter(
+            Q(name__icontains=search_query) | 
+            Q(product_id__icontains=search_query)
+        )
+
+    # 4. Apply Owner Filter
+    if filter_investor and filter_investor != 'all':
+        products = products.filter(investor_id=filter_investor)
+
+    # 5. Calculate Total Value of visible inventory (Buying Price * Quantity)
+    total_inventory_value = sum(p.buying_price * p.quantity for p in products)
+    product_count = products.count()
+
+    # 6. Get Sellers list for the dropdown
+    sellers = User.objects.filter(role__in=['OWNER', 'INVESTOR']).order_by('username')
+
+    context = {
+        'products': products,
+        'sellers': sellers,
+        'search_query': search_query,
+        'current_filter': int(filter_investor) if filter_investor and filter_investor != 'all' else 'all',
+        'total_value': total_inventory_value,
+        'product_count': product_count,
+        'is_owner': request.user.role == 'OWNER'
+    }
+    
+    return render(request, 'store/inventory_list.html', context)

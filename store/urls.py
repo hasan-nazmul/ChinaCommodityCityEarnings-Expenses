@@ -14,4 +14,6 @@ urlpatterns = [
     path('sales-history/', views.sales_history, name='sales_history'),
     path('api/product-lookup/', views.api_get_product, name='api_product_lookup'),
     path('profile/', views.profile, name='profile'),
+    path('sales-history/export/', views.export_sales_csv, name='export_sales_csv'),
+    path('inventory/', views.inventory_list, name='inventory_list'),
 ]

@@ -9,16 +9,25 @@
         </div>
         
         <!-- Summary Stats (Updates based on filter) -->
-        <div class="d-flex gap-3">
-            <div class="bg-white px-3 py-2 rounded shadow-sm border text-center">
-                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Transactions</small>
-                <div class="fw-bold fs-5">{{ total_count }}</div>
-            </div>
-            <div class="bg-dark text-white px-3 py-2 rounded shadow-sm border text-center">
-                <small class="text-white-50 text-uppercase fw-bold" style="font-size: 0.7rem;">Revenue</small>
-                <div class="fw-bold fs-5">${{ total_revenue }}</div>
-            </div>
-        </div>
+        <!-- Summary Stats & Export Button -->
+<div class="d-flex gap-2 align-items-center">
+    
+    <!-- UPDATED BUTTON: Includes request.GET.urlencode to keep filters -->
+    <a href="{% url 'export_sales_csv' %}?{{ request.GET.urlencode }}" class="btn btn-success shadow-sm text-nowrap">
+        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV
+    </a>
+
+    <div class="vr mx-2 text-secondary d-none d-md-block"></div>
+
+    <div class="bg-white px-3 py-2 rounded shadow-sm border text-center d-none d-md-block">
+        <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Transactions</small>
+        <div class="fw-bold fs-5">{{ total_count }}</div>
+    </div>
+    <div class="bg-dark text-white px-3 py-2 rounded shadow-sm border text-center">
+        <small class="text-white-50 text-uppercase fw-bold" style="font-size: 0.7rem;">Revenue</small>
+        <div class="fw-bold fs-5">${{ total_revenue }}</div>
+    </div>
+</div>
     </div>
 </div>
 
