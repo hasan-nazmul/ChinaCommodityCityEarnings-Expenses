@@ -5,13 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>China Commodity City</title>
 
-    <!-- Google Fonts (Inter for a modern look) -->
+    <!-- Google Fonts: Plus Jakarta Sans (Modern, Geometric, Clean) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
 
-    <!-- Bootstrap 5 CSS -->
+    <!-- Bootstrap 5.3 CSS -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
       rel="stylesheet"
@@ -25,168 +27,257 @@
 
     <style>
       :root {
-        --primary-color: #2c3e50; /* Deep Blue */
-        --accent-color: #3498db; /* Bright Blue */
-        --success-color: #27ae60; /* Green */
+        /* Modern Color Palette */
+        --primary-bg: #f8f9fa;
+        --card-bg: #ffffff;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        
+        --brand-color: #0f172a; /* Deep Navy */
+        --accent-color: #3b82f6; /* Bright Blue */
+        --success-color: #10b981; /* Emerald */
+        --warning-color: #f59e0b; /* Amber */
+        
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
       }
 
       body {
-        font-family: 'Inter', sans-serif;
-        background-color: #f4f6f9; /* Softer gray background */
-        color: #333;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        background-color: #f1f5f9; /* Slate-100 */
+        color: var(--text-main);
+        -webkit-font-smoothing: antialiased;
+        padding-bottom: 2rem;
       }
 
-      /* Navbar Styling */
+      /* --- NAVBAR STYLING --- */
       .navbar {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        padding: 0.8rem 1rem;
+        background-color: var(--brand-color);
+        padding: 0.75rem 0;
+        box-shadow: var(--shadow-md);
       }
-
+      
       .navbar-brand {
-        font-weight: 600;
-        letter-spacing: 0.5px;
-        font-size: 1.3rem;
-      }
-
-      .nav-link {
-        font-weight: 400;
-        color: rgba(255, 255, 255, 0.8) !important;
-        transition: all 0.2s ease;
-      }
-
-      .nav-link:hover,
-      .nav-link.active {
-        color: #fff !important;
-        transform: translateY(-1px);
-      }
-
-      /* Special Sell Button */
-      .btn-sell-desk {
-        background-color: var(--success-color);
-        border: none;
-        border-radius: 50px; /* Pill shape */
-        padding: 8px 20px;
-        font-weight: 600;
-        box-shadow: 0 4px 6px rgba(39, 174, 96, 0.3);
-        transition: all 0.3s ease;
-      }
-
-      .btn-sell-desk:hover {
-        background-color: #219150;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(39, 174, 96, 0.4);
+        font-weight: 700;
+        font-size: 1.25rem;
+        letter-spacing: -0.5px;
         color: white !important;
       }
 
-      /* Card Styling (Global) */
-      .card {
+      .nav-link {
+        font-weight: 500;
+        font-size: 0.95rem;
+        color: #94a3b8 !important; /* Slate-400 */
+        transition: all 0.2s ease;
+        padding: 0.5rem 1rem !important;
+        border-radius: 0.5rem;
+      }
+
+      .nav-link:hover, .nav-link.active {
+        color: white !important;
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      /* Sell Desk Button */
+      .btn-sell-desk {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
         border: none;
-        border-radius: 12px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        transition: transform 0.2s;
+      }
+      
+      .btn-sell-desk:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 15px rgba(16, 185, 129, 0.4);
+      }
+
+      /* --- CARD STYLING --- */
+      .card {
+        background-color: var(--card-bg);
+        border: none;
+        border-radius: 1rem; /* 16px */
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
         overflow: hidden;
       }
 
+      .card:hover {
+        /* Subtle lift effect on hover */
+        box-shadow: var(--shadow-md);
+      }
+
       .card-header {
-        background-color: #fff;
-        border-bottom: 1px solid #eee;
-        font-weight: 600;
-        padding: 1rem 1.25rem;
+        background-color: transparent;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 1.25rem 1.5rem;
       }
 
-      /* Table Styling */
+      .card-body {
+        padding: 1.5rem;
+      }
+
+      .card-footer {
+        background-color: transparent;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      /* --- TABLE STYLING --- */
+      .table {
+        margin-bottom: 0;
+        border-collapse: separate; 
+        border-spacing: 0;
+      }
+      
       .table thead th {
+        background-color: #f8fafc;
+        color: #64748b;
         font-weight: 600;
+        font-size: 0.75rem;
         text-transform: uppercase;
-        font-size: 0.85rem;
-        color: #666;
-        border-bottom: 2px solid #eee;
+        letter-spacing: 0.05em;
+        border-bottom: 1px solid #e2e8f0;
       }
 
-      /* Alerts */
-      .alert {
-        border-radius: 8px;
-        border: none;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-      }
-
-      /* Custom Utilities */
-      .low-stock {
-        background-color: #fff5f5 !important;
-      }
-      .text-small {
+      .table tbody td {
+        vertical-align: middle;
+        padding: 1rem 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
         font-size: 0.9rem;
+      }
+
+      /* NEW: Soft Blue Hover Effect + Clickable Row */
+      .table-hover tbody tr {
+        transition: background-color 0.15s ease-in-out;
+      }
+      
+      .table-hover tbody tr:hover {
+        background-color: rgba(59, 130, 246, 0.04) !important; /* Soft Brand Blue */
+        cursor: pointer;
+      }
+      
+      .table tbody tr:last-child td {
+        border-bottom: none;
+      }
+
+      /* --- BUTTONS & BADGES --- */
+      .btn {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+
+      .btn-primary {
+        background-color: var(--accent-color);
+        border-color: var(--accent-color);
+      }
+
+      .badge {
+        font-weight: 600;
+        padding: 0.5em 0.8em;
+      }
+
+      /* Utilities */
+      .text-small { font-size: 0.875rem; }
+      .fw-bold { font-weight: 700 !important; }
+      
+      .dropdown-menu {
+        border: none;
+        box-shadow: var(--shadow-lg);
+        border-radius: 0.75rem;
+        padding: 0.5rem;
+      }
+      .dropdown-item {
+        border-radius: 0.5rem;
+        padding: 0.5rem 1rem;
+      }
+      .dropdown-item:hover {
+        background-color: #f1f5f9;
       }
     </style>
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg navbar-dark mb-4 sticky-top">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg sticky-top">
       <div class="container">
-        <a
-          class="navbar-brand d-flex align-items-center"
-          href="{% url 'dashboard' %}"
-        >
-          <i class="bi bi-buildings-fill me-2"></i> China Commodity City
+        <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'dashboard' %}">
+           <i class="bi bi-buildings-fill text-white-50"></i>
+           <span>CCC<span class="text-white-50 ms-1 fw-light">System</span></span>
         </a>
+        
         <button
-          class="navbar-toggler"
+          class="navbar-toggler border-0 text-white"
           type="button"
           data-bs-toggle="collapse"
           data-bs-target="#navbarNav"
         >
-          <span class="navbar-toggler-icon"></span>
+          <i class="bi bi-list fs-3"></i>
         </button>
 
         <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav ms-auto align-items-center">
+          <ul class="navbar-nav ms-auto align-items-center gap-1">
             {% if user.is_authenticated %}
             <li class="nav-item">
-              <a class="nav-link" href="{% url 'dashboard' %}">
-                <i class="bi bi-speedometer2 me-1"></i> Dashboard
+              <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+                Dashboard
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{% url 'inventory_list' %}">
-                <i class="bi bi-boxes me-1"></i> Inventory
+              <a class="nav-link {% if 'inventory' in request.path %}active{% endif %}" href="{% url 'inventory_list' %}">
+                Inventory
               </a>
             </li>
+             <!-- Only Owner sees Approvals -->
+             {% if user.role == 'OWNER' %}
+             <li class="nav-item">
+               <a class="nav-link position-relative {% if 'approvals' in request.path %}active{% endif %}" href="{% url 'admin_approval_list' %}">
+                 Approvals
+                 {% if pending_approvals > 0 %}
+                 <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="width: 10px; height: 10px;">
+                   <span class="visually-hidden">New alerts</span>
+                 </span>
+                 {% endif %}
+               </a>
+             </li>
+             {% endif %}
+            
+            <!-- Separator -->
+            <li class="nav-item d-none d-lg-block mx-2 text-white-50">|</li>
+
             <li class="nav-item">
-              <a class="nav-link" href="{% url 'add_product' %}">
-                <i class="bi bi-box-seam me-1"></i> Add Product
-              </a>
+                <a class="nav-link btn-sell-desk px-4 ms-2" href="{% url 'sell_product' %}">
+                  <i class="bi bi-cart-fill me-2"></i>POS
+                </a>
             </li>
-            <li class="nav-item mx-2">
-              <a
-                class="nav-link btn-sell-desk text-white"
-                href="{% url 'sell_product' %}"
-              >
-                <i class="bi bi-cart-check-fill me-1"></i> Sell Desk
-              </a>
+            
+            <!-- User Dropdown -->
+            <li class="nav-item dropdown ms-lg-3">
+                <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 text-white" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="bg-white text-dark rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px;">
+                        {{ user.username|first|upper }}
+                    </div>
+                    <span class="d-none d-lg-block">{{ user.username }}</span>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end mt-2">
+                  <li><h6 class="dropdown-header small text-muted text-uppercase">Signed in as {{ user.get_role_display }}</h6></li>
+                  <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="bi bi-person-gear me-2"></i>Profile Settings</a></li>
+                  {% if user.role != 'OWNER' %}
+                  <li><a class="dropdown-item" href="{% url 'my_requests' %}"><i class="bi bi-clock-history me-2"></i>My History</a></li>
+                  {% endif %}
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <form action="{% url 'logout' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="dropdown-item text-danger fw-bold"><i class="bi bi-box-arrow-right me-2"></i>Sign Out</button>
+                    </form>
+                  </li>
+                </ul>
             </li>
-            <!-- Replace the old Logout <li> with this: -->
-              <li class="nav-item">
-              <a class="nav-link" href="{% url 'profile' %}">
-                  <i class="bi bi-person-gear me-1"></i> Profile
-              </a>
-          </li>
-            <li class="nav-item ms-lg-3 border-start ps-lg-3 border-secondary">
-              <form action="{% url 'logout' %}" method="post" class="d-inline">
-                {% csrf_token %}
-                <button
-                  type="submit"
-                  class="nav-link btn btn-link text-danger fw-bold border-0 bg-transparent p-0"
-                  style="text-decoration: none"
-                >
-                  <i class="bi bi-box-arrow-right"></i> Logout
-                </button>
-              </form>
-            </li>
+
             {% else %}
             <li class="nav-item">
-              <a class="nav-link" href="{% url 'login' %}">
-                <i class="bi bi-person-circle me-1"></i> Login
-              </a>
+              <a class="nav-link active" href="{% url 'login' %}">Login</a>
             </li>
             {% endif %}
             
@@ -195,39 +286,56 @@
       </div>
     </nav>
 
-    <div class="container py-3" style="min-height: 80vh">
-      <!-- Messages -->
-      {% if messages %} {% for message in messages %}
-      <div
-        class="alert alert-{{ message.tags }} alert-dismissible fade show"
-        role="alert"
-      >
-        {% if message.tags == 'success' %}
-        <i class="bi bi-check-circle-fill me-2"></i>
-        {% elif message.tags == 'error' %}
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        {% endif %} {{ message }}
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="alert"
-          aria-label="Close"
-        ></button>
+    <!-- Main Layout -->
+    <div class="container py-4">
+      
+      <!-- Alert Messages -->
+      {% if messages %} 
+      <div class="row justify-content-center mb-4">
+          <div class="col-lg-8">
+              {% for message in messages %}
+              <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm border-0 d-flex align-items-center" role="alert">
+                {% if message.tags == 'success' %}
+                    <i class="bi bi-check-circle-fill text-success fs-4 me-3"></i>
+                {% elif message.tags == 'error' %}
+                    <i class="bi bi-x-circle-fill text-danger fs-4 me-3"></i>
+                {% elif message.tags == 'warning' %}
+                    <i class="bi bi-exclamation-triangle-fill text-warning fs-4 me-3"></i>
+                {% else %}
+                    <i class="bi bi-info-circle-fill text-info fs-4 me-3"></i>
+                {% endif %}
+                <div>
+                    <strong>{{ message }}</strong>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+              {% endfor %} 
+          </div>
       </div>
-      {% endfor %} {% endif %}
+      {% endif %}
 
-      <!-- Page Content -->
+      <!-- Dynamic Content -->
       {% block content %}{% endblock %}
+      
     </div>
 
-    <footer class="text-center text-muted py-4 mt-4 border-top bg-white">
-      <small
-        >&copy; {% now "Y" %} China Commodity City Management System. All rights
-        reserved.</small
-      >
+    <!-- Footer -->
+    <footer class="text-center py-5 mt-auto">
+      <div class="container">
+          <p class="text-muted small mb-0">
+              &copy; {% now "Y" %} China Commodity City Management System. 
+              <span class="d-block d-md-inline ms-md-2">Built for performance.</span>
+          </p>
+      </div>
     </footer>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Tooltip Init -->
+    <script>
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+    </script>
   </body>
 </html>

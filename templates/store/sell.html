@@ -1,88 +1,190 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="row">
+
+<!-- Page Specific CSS for POS Polish -->
+<style>
+    /* POS Specific Tweaks matching Base Theme */
+    .pos-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .search-bar-container {
+        position: relative;
+    }
+    
+    .search-icon {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        font-size: 1.2rem;
+        z-index: 10;
+    }
+    
+    /* Modern Input Styling */
+    .form-control-pos {
+        background-color: #f8fafc; /* Slate-50 */
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        padding-left: 1rem;
+        transition: all 0.2s;
+    }
+    
+    .form-control-pos:focus {
+        background-color: #fff;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-control-search {
+        padding-left: 3rem; /* Space for icon */
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+        font-size: 1.1rem;
+        font-weight: 500;
+        border-radius: 1rem;
+    }
+
+    /* Table Tweaks */
+    .table-pos thead th {
+        background-color: transparent;
+        font-size: 0.7rem;
+        letter-spacing: 0.1em;
+        color: var(--text-muted);
+        border-bottom: 2px solid #f1f5f9;
+        padding-left: 1rem;
+    }
+    .table-pos tbody td {
+        padding: 1rem;
+        border-bottom: 1px solid #f8fafc;
+    }
+    
+    /* Qty Input */
+    .qty-input {
+        background: #f1f5f9;
+        border: none;
+        border-radius: 0.5rem;
+        text-align: center;
+        font-weight: 600;
+        color: var(--brand-color);
+    }
+    .qty-input:focus {
+        background: #fff;
+        box-shadow: inset 0 0 0 2px var(--accent-color);
+    }
+
+    /* Summary Section */
+    .summary-panel {
+        background-color: #f8fafc;
+        border-radius: 1rem;
+        padding: 1.5rem;
+    }
+
+    .total-display {
+        color: var(--brand-color);
+        letter-spacing: -1px;
+    }
+</style>
+
+<div class="row g-4">
     <!-- LEFT: POS CART -->
-    <div class="col-lg-8 mb-4">
-        <div class="card shadow-lg border-0 h-100">
-            <div class="card-header bg-dark text-white py-3 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold"><i class="bi bi-cart4 me-2"></i>New Transaction</h5>
-                <a href="{% url 'customer_list' %}" class="btn btn-sm btn-outline-light">
-                    <i class="bi bi-people-fill"></i> Customers
+    <div class="col-lg-8">
+        <div class="card pos-card shadow-sm">
+            <!-- Header -->
+            <div class="card-header d-flex justify-content-between align-items-center bg-white border-0 pt-4 pb-0 px-4">
+                <div>
+                    <h5 class="fw-bold mb-1 text-dark">New Transaction</h5>
+                    <p class="text-muted small mb-0">Enter customer details and scan items.</p>
+                </div>
+                <a href="{% url 'customer_list' %}" class="btn btn-sm btn-outline-secondary border-0 bg-light text-dark fw-bold">
+                    <i class="bi bi-people-fill me-2"></i>Customers
                 </a>
             </div>
-            <div class="card-body p-4">
+
+            <div class="card-body px-4 pb-4 pt-3 d-flex flex-column">
                 
                 <!-- 1. Customer Info -->
-                <div class="row g-2 mb-3">
+                <div class="row g-3 mb-4">
                     <div class="col-md-6">
-                        <input type="text" id="custName" class="form-control" placeholder="Customer Name (Optional)">
+                        <label class="form-label text-muted small fw-bold text-uppercase mb-1 ms-1">Customer Name</label>
+                        <input type="text" id="custName" class="form-control form-control-pos" placeholder="e.g. Walk-in Client">
                     </div>
                     <div class="col-md-6">
-                        <input type="text" id="custContact" class="form-control" placeholder="Mobile / Email (Optional)">
+                        <label class="form-label text-muted small fw-bold text-uppercase mb-1 ms-1">Contact</label>
+                        <input type="text" id="custContact" class="form-control form-control-pos" placeholder="Email or Phone number">
                     </div>
                 </div>
 
                 <!-- 2. Product Scanner -->
-                <div class="input-group input-group-lg mb-4">
-                    <span class="input-group-text bg-light"><i class="bi bi-upc-scan"></i></span>
-                    <input type="text" id="productInput" class="form-control border-start-0 fw-bold" placeholder="Scan ID or Type Name & Hit Enter" autofocus>
-                    <button class="btn btn-primary" onclick="lookupProduct()">Add</button>
+                <div class="search-bar-container mb-2">
+                    <i class="bi bi-upc-scan search-icon"></i>
+                    <input type="text" id="productInput" class="form-control form-control-pos form-control-search shadow-sm" placeholder="Scan barcode or type product name..." autofocus>
+                    <button class="btn btn-primary position-absolute end-0 top-50 translate-middle-y me-2 rounded-3 px-3 fw-bold" onclick="lookupProduct()">Add</button>
                 </div>
-                <div id="scanError" class="text-danger fw-bold small mb-2"></div>
+                <div id="scanError" class="text-danger fw-bold small mb-3 ps-2" style="min-height: 20px;"></div>
 
                 <!-- 3. Cart Table -->
-                <div class="table-responsive mb-4 border rounded">
-                    <table class="table table-striped align-middle mb-0">
-                        <thead class="bg-light">
+                <div class="table-responsive flex-grow-1 mb-4 border rounded-4">
+                    <table class="table table-pos align-middle mb-0 w-100">
+                        <thead>
                             <tr>
-                                <th>Item</th>
-                                <th width="15%">Price</th>
-                                <th width="15%">Qty</th>
-                                <th width="15%" class="text-end">Total</th>
+                                <th width="45%">ITEM</th>
+                                <th width="20%">PRICE</th>
+                                <th width="15%">QTY</th>
+                                <th width="15%" class="text-end">TOTAL</th>
                                 <th width="5%"></th>
                             </tr>
                         </thead>
                         <tbody id="cartTableBody">
-                            <!-- JS will inject rows here -->
+                            <!-- JS Injects Here -->
+                            <!-- Empty state placeholder logic is in JS, but could be added here if desired -->
                         </tbody>
                     </table>
                 </div>
 
                 <!-- 4. Totals & Discount -->
-                <div class="row justify-content-end text-end">
+                <div class="row justify-content-end">
                     <div class="col-md-5">
-                        <div class="d-flex justify-content-between mb-2 align-items-center">
-                            <span>Subtotal:</span>
-                            <span class="fw-bold fs-5" id="subtotalDisplay">$0.00</span>
-                        </div>
-                        
-                        <div class="d-flex justify-content-between mb-2 align-items-center">
-                            <span class="text-danger">Discount (%):</span>
-                            <input type="number" id="discountPercent" class="form-control form-control-sm w-25 text-end text-danger fw-bold" value="0" min="0" max="100" onchange="updateTotals()">
-                        </div>
+                        <div class="summary-panel">
+                            <div class="d-flex justify-content-between mb-2 align-items-center">
+                                <span class="text-muted small fw-bold text-uppercase">Subtotal</span>
+                                <span class="fw-bold fs-6" id="subtotalDisplay">$0.00</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between mb-3 align-items-center">
+                                <span class="text-danger small fw-bold text-uppercase">Discount (%)</span>
+                                <input type="number" id="discountPercent" class="form-control form-control-sm w-25 text-end text-danger fw-bold bg-white border-0 shadow-none" value="0" min="0" max="100" onchange="updateTotals()">
+                            </div>
 
-                        <div class="d-flex justify-content-between border-top pt-2">
-                            <span class="fs-4 fw-bold text-dark">Total:</span>
-                            <span class="fs-4 fw-bold text-success" id="finalTotalDisplay">$0.00</span>
+                            <div class="d-flex justify-content-between border-top border-secondary border-opacity-10 pt-3 mt-2">
+                                <span class="fs-5 fw-bold text-dark">Total</span>
+                                <span class="fs-3 fw-bold total-display" id="finalTotalDisplay">$0.00</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <hr class="my-4">
+                <hr class="my-4 border-secondary border-opacity-10">
 
                 <!-- 5. Actions -->
-                <div class="row g-2">
+                <div class="row g-3 align-items-center">
                     <div class="col-md-4">
-                        <select id="paymentMethod" class="form-select form-select-lg fw-bold">
-                            <option value="CASH">CASH</option>
-                            <option value="CARD">CARD</option>
-                            <option value="ONLINE">ONLINE</option>
+                        <label class="form-label text-muted small fw-bold text-uppercase mb-1 ms-1">Payment Method</label>
+                        <select id="paymentMethod" class="form-select form-control-pos fw-bold text-dark">
+                            <option value="CASH">💵 Cash</option>
+                            <option value="CARD">💳 Card</option>
+                            <option value="ONLINE">🌐 Online / Transfer</option>
                         </select>
                     </div>
-                    <div class="col-md-8">
-                        <button onclick="submitSale()" class="btn btn-success btn-lg w-100 fw-bold shadow-sm">
-                            <i class="bi bi-check-circle-fill me-2"></i> COMPLETE SALE
+                    <div class="col-md-8 pt-4 pt-md-0">
+                        <!-- Using the gradient class from base.html for consistency -->
+                         <div class="d-none d-md-block" style="height: 1.6rem;"></div>
+                        <button onclick="submitSale()" class="btn btn-sell-desk w-100 py-3 rounded-3 fw-bold fs-5">
+                            <i class="bi bi-check2-circle me-2"></i>Complete Sale
                         </button>
                     </div>
                 </div>
@@ -93,40 +195,44 @@
 
     <!-- RIGHT: HISTORY -->
     <div class="col-lg-4">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white pt-3 pb-2 border-bottom-0">
-                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-clock-history me-2"></i>Recent Transactions</h6>
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom pt-4 pb-3">
+                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Recent Transactions</h6>
             </div>
             <div class="card-body p-0">
                 <ul class="list-group list-group-flush">
                     {% if recent_sales %}
                         {% for sale in recent_sales %}
-                        <li class="list-group-item px-4 py-3 border-0 border-bottom">
-                            <div class="d-flex justify-content-between">
-                                <span class="fw-bold">{{ sale.product.name }}</span>
-                                <span class="badge bg-light text-dark">{{ sale.date|date:"H:i" }}</span>
+                        <li class="list-group-item px-4 py-3 border-bottom border-light">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold text-dark text-truncate" style="max-width: 150px;">{{ sale.product.name }}</span>
+                                <span class="badge bg-light text-muted border fw-normal">{{ sale.date|date:"H:i" }}</span>
                             </div>
-                            <div class="d-flex justify-content-between mt-1">
-                                <small class="text-muted">x{{ sale.quantity }} 
-                                    {% if sale.discount_percent > 0 %}<span class="text-danger">(-{{sale.discount_percent}}%)</span>{% endif %}
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <span class="fw-bold text-dark">x{{ sale.quantity }}</span> items
+                                    {% if sale.discount_percent > 0 %}<span class="badge bg-danger bg-opacity-10 text-danger ms-1">-{{sale.discount_percent}}%</span>{% endif %}
                                 </small>
                                 <span class="fw-bold text-success">${{ sale.total_amount }}</span>
                             </div>
                         </li>
                         {% endfor %}
                     {% else %}
-                        <li class="list-group-item text-center py-5 text-muted">Empty session.</li>
+                        <li class="list-group-item text-center py-5 text-muted bg-light border-0">
+                            <i class="bi bi-inbox fs-1 d-block mb-2 text-muted opacity-50"></i>
+                            <span class="small">Session is empty.</span>
+                        </li>
                     {% endif %}
                 </ul>
-                <div class="card-footer bg-white border-0 text-center pb-3">
-                    <a href="{% url 'sales_history' %}" class="small fw-bold">View Full Ledger</a>
-                </div>
+            </div>
+            <div class="card-footer bg-white text-center pb-4 pt-3 border-0">
+                <a href="{% url 'sales_history' %}" class="btn btn-link text-decoration-none fw-bold small text-primary">View Full Ledger <i class="bi bi-arrow-right ms-1"></i></a>
             </div>
         </div>
     </div>
 </div>
 
-<!-- JAVASCRIPT LOGIC -->
+<!-- JAVASCRIPT LOGIC (Unchanged) -->
 <script>
     let cart = [];
 
@@ -186,19 +292,22 @@
             const total = item.price * item.qty;
             subtotal += total;
 
+            // Updated HTML structure for the new styling
             tbody.innerHTML += `
                 <tr>
                     <td>
                         <div class="fw-bold text-dark">${item.name}</div>
-                        <small class="text-muted">${item.custom_id}</small>
+                        <small class="text-muted" style="font-size:0.8em;">ID: ${item.custom_id}</small>
                     </td>
-                    <td>$${item.price.toFixed(2)}</td>
+                    <td class="text-muted">$${item.price.toFixed(2)}</td>
                     <td>
-                        <input type="number" class="form-control form-control-sm w-75" value="${item.qty}" min="1" max="${item.stock}" onchange="updateQty(${index}, this.value)">
+                        <input type="number" class="form-control form-control-sm qty-input" value="${item.qty}" min="1" max="${item.stock}" onchange="updateQty(${index}, this.value)">
                     </td>
-                    <td class="text-end fw-bold">$${total.toFixed(2)}</td>
+                    <td class="text-end fw-bold text-dark">$${total.toFixed(2)}</td>
                     <td class="text-end">
-                        <button class="btn btn-sm text-danger" onclick="removeItem(${index})"><i class="bi bi-trash"></i></button>
+                        <button class="btn btn-sm text-danger p-0 border-0" onclick="removeItem(${index})" title="Remove">
+                            <i class="bi bi-trash3-fill fs-6"></i>
+                        </button>
                     </td>
                 </tr>
             `;

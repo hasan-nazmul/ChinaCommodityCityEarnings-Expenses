@@ -1,102 +1,143 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        
-        <!-- Header & Buttons -->
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-            <div>
-                <h3 class="fw-bold mb-0"><i class="bi bi-people-fill me-2"></i>Customer Database</h3>
-                <p class="text-muted small mb-0">Registered profiles grouped by Mobile Number</p>
-            </div>
+<div class="row mb-4 align-items-end">
+    <div class="col-md-6">
+        <h3 class="fw-bold mb-1 text-dark"><i class="bi bi-people-fill me-2 text-primary"></i>Customer Database</h3>
+        <p class="text-muted small mb-0">View registered profiles, purchase history, and loyalty stats.</p>
+    </div>
+    
+    <!-- TOOLBAR -->
+    <div class="col-md-6">
+        <div class="d-flex justify-content-md-end align-items-center gap-3 mt-3 mt-md-0">
             
-            <div class="btn-toolbar gap-2">
-                <!-- Sorting Group -->
-                <div class="btn-group shadow-sm">
-                    <a href="?sort=date" class="btn btn-sm {% if current_sort == 'date' %}btn-dark{% else %}btn-outline-secondary bg-white{% endif %}">
-                        <i class="bi bi-calendar-event me-1"></i> Recent
-                    </a>
-                    <a href="?sort=visits" class="btn btn-sm {% if current_sort == 'visits' %}btn-dark{% else %}btn-outline-secondary bg-white{% endif %}">
-                        <i class="bi bi-bag-check me-1"></i> Frequent
-                    </a>
-                    <a href="?sort=spent" class="btn btn-sm {% if current_sort == 'spent' %}btn-dark{% else %}btn-outline-secondary bg-white{% endif %}">
-                        <i class="bi bi-cash-stack me-1"></i> Top Spenders
-                    </a>
-                </div>
-
-                <a href="{% url 'sell_product' %}" class="btn btn-sm btn-outline-primary ms-2">
-                    <i class="bi bi-cart-plus me-1"></i> POS
+            <!-- Sorting Controls -->
+            <div class="d-flex align-items-center bg-white p-1 rounded-3 shadow-sm border">
+                <a href="?sort=date" class="btn btn-sm fw-bold px-3 rounded-2 {% if current_sort == 'date' %}btn-dark{% else %}text-muted{% endif %}">
+                    Recent
+                </a>
+                <a href="?sort=visits" class="btn btn-sm fw-bold px-3 rounded-2 {% if current_sort == 'visits' %}btn-dark{% else %}text-muted{% endif %}">
+                    Frequent
+                </a>
+                <a href="?sort=spent" class="btn btn-sm fw-bold px-3 rounded-2 {% if current_sort == 'spent' %}btn-dark{% else %}text-muted{% endif %}">
+                    Top Spenders
                 </a>
             </div>
-        </div>
 
-        <!-- Table Card -->
-        <div class="card shadow-sm border-0">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="bg-light">
-                            <tr class="text-uppercase small text-secondary">
-                                <th class="ps-4 py-3">Customer Name</th>
-                                <th>Mobile (ID)</th>
-                                <th>
-                                    Lifetime Visits 
-                                    {% if current_sort == 'visits' %}<i class="bi bi-arrow-down text-dark"></i>{% endif %}
-                                </th>
-                                <th>
-                                    Last Seen
-                                    {% if current_sort == 'date' %}<i class="bi bi-arrow-down text-dark"></i>{% endif %}
-                                </th>
-                                <th class="text-end pe-4">
-                                    Total Spent
-                                    {% if current_sort == 'spent' %}<i class="bi bi-arrow-down text-dark"></i>{% endif %}
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for c in customers %}
-                            <tr>
-                                <td class="ps-4">
-                                    <a href="{% url 'customer_profile' c.id %}" class="fw-bold text-decoration-none text-primary fs-5">
-                                        {{ c.name }} <i class="bi bi-box-arrow-up-right small ms-1" style="font-size: 0.7em;"></i>
-                                    </a>
-                                </td>
-                                <td class="fw-bold text-dark">
-                                    <i class="bi bi-phone me-1 text-muted"></i> {{ c.mobile }}
-                                </td>
-                                <td>
-                                    <span class="badge {% if current_sort == 'visits' %}bg-dark text-white{% else %}bg-secondary bg-opacity-10 text-dark{% endif %} rounded-pill px-3">
-                                        {{ c.visit_count }} Orders
-                                    </span>
-                                </td>
-                                <td class="text-muted small">
-                                    {% if c.last_visit %}
-                                        {{ c.last_visit|date:"M d, Y" }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                                <td class="text-end pe-4 fw-bold {% if current_sort == 'spent' %}text-white bg-success{% else %}text-success{% endif %} fs-5">
-                                    {% if c.total_spent %}
-                                        ${{ c.total_spent }}
-                                    {% else %}
-                                        $0.00
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center py-5 text-muted">
-                                    No registered customers found.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <!-- Quick Action -->
+            <a href="{% url 'sell_product' %}" class="btn btn-primary shadow-sm fw-bold d-none d-lg-inline-block">
+                <i class="bi bi-cart-plus me-1"></i> New Sale
+            </a>
         </div>
+    </div>
+</div>
+
+<!-- Table Card -->
+<div class="card shadow-sm border-0 overflow-hidden">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4 py-3 text-uppercase text-secondary small fw-bold">Customer Name</th>
+                        <th class="text-uppercase text-secondary small fw-bold">Contact Info</th>
+                        <th class="text-uppercase text-secondary small fw-bold">
+                            Loyalty Stats 
+                            {% if current_sort == 'visits' %}<i class="bi bi-arrow-down-short text-dark"></i>{% endif %}
+                        </th>
+                        <th class="text-uppercase text-secondary small fw-bold">
+                            Last Seen
+                            {% if current_sort == 'date' %}<i class="bi bi-arrow-down-short text-dark"></i>{% endif %}
+                        </th>
+                        <th class="text-end pe-4 text-uppercase text-secondary small fw-bold">
+                            Lifetime Value
+                            {% if current_sort == 'spent' %}<i class="bi bi-arrow-down-short text-dark"></i>{% endif %}
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in customers %}
+                    <!-- CLICKABLE ROW LOGIC -->
+                    <tr onclick="window.location='{% url 'customer_profile' c.id %}'">
+                        
+                        <!-- Name -->
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex justify-content-center align-items-center me-3 fw-bold" style="width: 40px; height: 40px;">
+                                    {{ c.name|first|upper }}
+                                </div>
+                                <div>
+                                    <span class="fw-bold text-dark text-decoration-none">
+                                        {{ c.name }}
+                                    </span>
+                                    <div class="small text-muted">ID: #{{ c.id }}</div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Contact -->
+                        <td>
+                            <div class="d-flex flex-column">
+                                <span class="fw-bold text-dark font-monospace"><i class="bi bi-phone me-1 text-muted"></i>{{ c.mobile }}</span>
+                                {% if c.email %}
+                                <span class="small text-muted">{{ c.email }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Visits -->
+                        <td>
+                            {% if current_sort == 'visits' %}
+                                <span class="badge bg-dark text-white rounded-pill px-3 py-2 border border-secondary border-opacity-25">
+                                    <i class="bi bi-star-fill text-warning me-1"></i> {{ c.visit_count }} Orders
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill px-3 py-2">
+                                    {{ c.visit_count }} Orders
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Last Seen -->
+                        <td>
+                            {% if c.last_visit %}
+                                <span class="text-dark fw-medium">{{ c.last_visit|date:"M d, Y" }}</span>
+                                <div class="small text-muted">{{ c.last_visit|timesince }} ago</div>
+                            {% else %}
+                                <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Total Spent -->
+                        <td class="text-end pe-4">
+                            {% if c.total_spent %}
+                                <span class="fs-5 fw-bold {% if current_sort == 'spent' %}text-success{% else %}text-dark{% endif %}">
+                                    ${{ c.total_spent }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">$0.00</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="py-4">
+                                <div class="bg-light rounded-circle d-inline-flex p-4 mb-3 text-secondary">
+                                    <i class="bi bi-people display-4"></i>
+                                </div>
+                                <h5 class="fw-bold text-dark">No Customers Yet</h5>
+                                <p class="text-muted small mb-0">Profiles will appear here automatically when sales are made.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer bg-white py-3">
+        <small class="text-muted">Showing {{ customers|length }} registered profiles</small>
     </div>
 </div>
 {% endblock %}

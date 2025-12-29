@@ -1,82 +1,77 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <div>
-            <h3 class="fw-bold mb-0"><i class="bi bi-receipt-cutoff me-2"></i>Sales Ledger</h3>
-            <p class="text-muted small mb-0">Complete history of all transactions.</p>
-        </div>
-        
-        <!-- Summary Stats (Updates based on filter) -->
-        <!-- Summary Stats & Export Button -->
-<div class="d-flex gap-2 align-items-center">
+<div class="row mb-4 align-items-end">
+    <div class="col-md-6">
+        <h3 class="fw-bold mb-1 text-dark"><i class="bi bi-receipt-cutoff me-2 text-primary"></i>Sales Ledger</h3>
+        <p class="text-muted small mb-0">Complete transactional history and financial records.</p>
+    </div>
     
-    <!-- UPDATED BUTTON: Includes request.GET.urlencode to keep filters -->
-    <a href="{% url 'export_sales_csv' %}?{{ request.GET.urlencode }}" class="btn btn-success shadow-sm text-nowrap">
-        <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV
-    </a>
-
-    <div class="vr mx-2 text-secondary d-none d-md-block"></div>
-
-    <div class="bg-white px-3 py-2 rounded shadow-sm border text-center d-none d-md-block">
-        <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Transactions</small>
-        <div class="fw-bold fs-5">{{ total_count }}</div>
-    </div>
-    <div class="bg-dark text-white px-3 py-2 rounded shadow-sm border text-center">
-        <small class="text-white-50 text-uppercase fw-bold" style="font-size: 0.7rem;">Revenue</small>
-        <div class="fw-bold fs-5">${{ total_revenue }}</div>
-    </div>
-</div>
+    <!-- Header Stats -->
+    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+        <div class="d-inline-flex gap-2">
+            <div class="bg-white px-4 py-2 rounded-3 shadow-sm border d-flex flex-column align-items-end">
+                <small class="text-uppercase text-muted fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px;">Transactions</small>
+                <div class="fw-bold text-dark fs-5 mb-0">{{ total_count }}</div>
+            </div>
+            <div class="bg-dark px-4 py-2 rounded-3 shadow-sm border border-dark d-flex flex-column align-items-end">
+                <small class="text-white-50 text-uppercase fw-bold" style="font-size: 0.65rem; letter-spacing: 0.5px;">Total Revenue</small>
+                <div class="fw-bold text-success fs-5 mb-0">${{ total_revenue }}</div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- FILTER BAR (Form wraps everything so dropdown + buttons work together) -->
-<div class="card shadow-sm border-0 mb-4">
-    <div class="card-body p-2 bg-light rounded">
-        <form method="GET" class="d-flex flex-wrap gap-2 align-items-center">
+<!-- ============================ -->
+<!-- FILTER TOOLBAR -->
+<!-- ============================ -->
+<div class="card shadow-sm border-0 mb-4 overflow-hidden">
+    <div class="card-body p-3 bg-white">
+        <form method="GET" class="d-flex flex-wrap gap-3 align-items-center justify-content-between">
             
-            <!-- 1. SELLER DROPDOWN -->
-            <!-- Inside the form in sales_history.html -->
-<div style="min-width: 150px;">
-    <select name="investor" class="form-select form-select-sm fw-bold border-0 shadow-sm" onchange="this.form.submit()">
-        <option value="all" {% if current_filter == 'all' %}selected{% endif %}>All Sellers</option>
-        <!-- UPDATED LOOP VARIABLE -->
-        {% for seller in sellers_list %}
-        <option value="{{ seller.id }}" {% if current_filter == seller.id %}selected{% endif %}>
-            {{ seller.username }}
-        </option>
-        {% endfor %}
-    </select>
-</div>
+            <!-- LEFT: Seller & Export -->
+            <div class="d-flex gap-2 align-items-center flex-grow-1">
+                <div style="min-width: 200px;">
+                    <select name="investor" class="form-select border-secondary-subtle text-secondary shadow-sm fw-bold" onchange="this.form.submit()">
+                        <option value="all" {% if current_filter == 'all' %}selected{% endif %}>All Sellers</option>
+                        {% for seller in sellers_list %}
+                        <option value="{{ seller.id }}" {% if current_filter == seller.id %}selected{% endif %}>
+                            {{ seller.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <a href="{% url 'export_sales_csv' %}?{{ request.GET.urlencode }}" class="btn btn-success shadow-sm fw-bold px-3">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export
+                </a>
+            </div>
 
-            <div class="vr mx-1 text-secondary d-none d-md-block"></div>
-
-            <!-- 2. DATE BUTTONS (Type=Submit so they submit the form including the dropdown) -->
-            <div class="btn-group flex-grow-1" role="group">
+            <!-- RIGHT: Date Filters (Pills Style) -->
+            <div class="bg-light p-1 rounded-pill d-inline-flex border">
                 <button type="submit" name="filter" value="" 
-                   class="btn btn-sm fw-bold {% if not filter_type %}btn-dark{% else %}btn-white border text-secondary bg-white{% endif %}">
+                   class="btn btn-sm rounded-pill px-3 fw-bold {% if not filter_type %}btn-white shadow-sm text-dark{% else %}text-muted{% endif %}">
                    All Time
                 </button>
 
                 <button type="submit" name="filter" value="today" 
-                   class="btn btn-sm fw-bold {% if filter_type == 'today' %}btn-dark{% else %}btn-white border text-secondary bg-white{% endif %}">
+                   class="btn btn-sm rounded-pill px-3 fw-bold {% if filter_type == 'today' %}btn-white shadow-sm text-dark{% else %}text-muted{% endif %}">
                    Today
                 </button>
 
                 <button type="submit" name="filter" value="week" 
-                   class="btn btn-sm fw-bold {% if filter_type == 'week' %}btn-dark{% else %}btn-white border text-secondary bg-white{% endif %}">
-                   Last 7 Days
+                   class="btn btn-sm rounded-pill px-3 fw-bold {% if filter_type == 'week' %}btn-white shadow-sm text-dark{% else %}text-muted{% endif %}">
+                   Week
                 </button>
 
                 <button type="submit" name="filter" value="month" 
-                   class="btn btn-sm fw-bold {% if filter_type == 'month' %}btn-dark{% else %}btn-white border text-secondary bg-white{% endif %}">
-                   Last Month
+                   class="btn btn-sm rounded-pill px-3 fw-bold {% if filter_type == 'month' %}btn-white shadow-sm text-dark{% else %}text-muted{% endif %}">
+                   Month
                 </button>
 
                 <button type="submit" name="filter" value="year" 
-                   class="btn btn-sm fw-bold {% if filter_type == 'year' %}btn-dark{% else %}btn-white border text-secondary bg-white{% endif %}">
-                   Last Year
+                   class="btn btn-sm rounded-pill px-3 fw-bold {% if filter_type == 'year' %}btn-white shadow-sm text-dark{% else %}text-muted{% endif %}">
+                   Year
                 </button>
             </div>
 
@@ -84,66 +79,88 @@
     </div>
 </div>
 
+<!-- ============================ -->
 <!-- DATA TABLE -->
-<div class="card shadow-sm border-0">
+<!-- ============================ -->
+<div class="card shadow-sm border-0 overflow-hidden">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 table-striped">
+            <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light">
-                    <tr class="text-uppercase small text-secondary">
-                        <th class="ps-4 py-3">Date</th>
-                        <th>Product</th>
-                        <th>Sold By</th>
-                        <th>Customer</th>
-                        <th>Method</th>
-                        <th>Qty</th>
-                        <th class="text-end pe-4">Total</th>
+                    <tr>
+                        <th class="ps-4 py-3 text-uppercase text-secondary small fw-bold">Date & Time</th>
+                        <th class="text-uppercase text-secondary small fw-bold">Product Details</th>
+                        <th class="text-uppercase text-secondary small fw-bold">Seller</th>
+                        <th class="text-uppercase text-secondary small fw-bold">Customer</th>
+                        <th class="text-uppercase text-secondary small fw-bold">Payment</th>
+                        <th class="text-uppercase text-secondary small fw-bold">Qty</th>
+                        <th class="text-end pe-4 text-uppercase text-secondary small fw-bold">Total</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for sale in sales %}
                     <tr>
-                        <td class="ps-4 text-nowrap text-secondary small">
-                            {{ sale.date|date:"M d, Y" }} <br>
-                            {{ sale.date|date:"H:i" }}
+                        <!-- Date -->
+                        <td class="ps-4 text-nowrap">
+                            <span class="fw-bold text-dark d-block">{{ sale.date|date:"M d, Y" }}</span>
+                            <small class="text-muted">{{ sale.date|date:"H:i" }}</small>
                         </td>
+
+                        <!-- Product -->
                         <td>
                             <span class="fw-bold text-dark d-block">{{ sale.product.name }}</span>
-                            <small class="text-muted" style="font-size: 0.75rem;">ID: {{ sale.product.product_id }}</small>
+                            <small class="text-muted font-monospace" style="font-size: 0.75rem;">ID: {{ sale.product.product_id }}</small>
                         </td>
+
+                        <!-- Seller -->
                         <td>
-                            <span class="badge bg-light text-dark border">
-                                <i class="bi bi-person-badge"></i> {{ sale.sold_by.username }}
-                            </span>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-light rounded-circle text-secondary fw-bold d-flex justify-content-center align-items-center me-2" style="width: 24px; height: 24px; font-size: 0.7rem;">
+                                    {{ sale.sold_by.username|first|upper }}
+                                </div>
+                                <span class="text-dark small fw-medium">{{ sale.sold_by.username }}</span>
+                            </div>
                         </td>
+
+                        <!-- Customer -->
                         <td>
                             {% if sale.customer %}
                                 <a href="{% url 'customer_profile' sale.customer.id %}" class="text-decoration-none fw-bold text-primary">
                                     {{ sale.customer.name }}
                                 </a>
                             {% else %}
-                                <span class="text-muted">{{ sale.customer_name_text|default:"Walk-in" }}</span>
+                                <span class="text-muted small">{{ sale.customer_name_text|default:"Walk-in Customer" }}</span>
                             {% endif %}
                         </td>
+
+                        <!-- Method -->
                         <td>
                             {% if sale.payment_method == 'CASH' %}
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2">CASH</span>
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-10 rounded-pill px-2">CASH</span>
                             {% elif sale.payment_method == 'CARD' %}
-                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-2">CARD</span>
+                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-10 rounded-pill px-2">CARD</span>
                             {% else %}
-                                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2">ONLINE</span>
+                                <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-10 rounded-pill px-2">ONLINE</span>
                             {% endif %}
                         </td>
-                        <td class="fw-bold text-secondary">x{{ sale.quantity }}</td>
-                        <td class="text-end pe-4 fw-bold text-dark">
-                            ${{ sale.total_amount }}
+
+                        <!-- Qty -->
+                        <td>
+                            <span class="badge bg-light text-secondary border px-2">x{{ sale.quantity }}</span>
+                        </td>
+
+                        <!-- Total -->
+                        <td class="text-end pe-4">
+                            <span class="fw-bold text-dark">${{ sale.total_amount }}</span>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center py-5 text-muted">
-                            <i class="bi bi-calendar-x display-4 d-block mb-3 opacity-25"></i>
-                            No sales found for this period.
+                        <td colspan="7" class="text-center py-5">
+                            <div class="py-4 opacity-50">
+                                <i class="bi bi-calendar-x display-4 mb-3 d-block text-muted"></i>
+                                <p class="mb-0 text-muted">No sales found for this period.</p>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}

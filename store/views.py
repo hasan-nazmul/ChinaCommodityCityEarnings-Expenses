@@ -24,23 +24,22 @@ from .analytics import get_predicted_top_product
 def dashboard(request):
     user = request.user
     
-    # 1. Handle Filters
-    filter_investor_id = request.GET.get('investor')
+    # ... [Keep lines 1-60 exactly the same (Filters, Basic Queries, Financials)] ...
+    # (Copy from previous file or keep existing until 'owner_net_income' calculation)
     
-    # 2. Base Queries
+    # 1. Handle Filters & Base Queries (Standard stuff)
+    filter_investor_id = request.GET.get('investor')
     products_query = Product.objects.all()
     sales_query = Sale.objects.all().order_by('-date')
     
-    # 3. Apply Filter
     if filter_investor_id and filter_investor_id != 'all':
         products_query = products_query.filter(investor_id=filter_investor_id)
         sales_query = sales_query.filter(product__investor_id=filter_investor_id)
 
-    # 4. Execute and Slice
     products = products_query
     sales_history = sales_query[:50]
 
-    # 5. Global Stats
+    # Global Stats
     cash_income = Sale.objects.filter(payment_method='CASH').aggregate(t=Sum('total_amount'))['t'] or 0
     card_income = Sale.objects.filter(payment_method='CARD').aggregate(t=Sum('total_amount'))['t'] or 0
     online_income = Sale.objects.filter(payment_method='ONLINE').aggregate(t=Sum('total_amount'))['t'] or 0
@@ -52,41 +51,43 @@ def dashboard(request):
         'total': round(cash_income + card_income + online_income, 2)
     }
 
-    # 6. Financials
+    # Financials (Owner View)
     investors_only = User.objects.filter(role='INVESTOR')
     financials = []
-    
     for inv in investors_only:
         t_earned = Sale.objects.filter(product__investor=inv).aggregate(total=Sum('investor_profit_amount'))['total'] or 0
         t_paid = inv.payouts.aggregate(total=Sum('amount'))['total'] or 0
-        t_due = t_earned - t_paid
-        
         financials.append({
             'investor': inv,
             'earned': round(t_earned, 2),
             'paid': round(t_paid, 2),
-            'due': round(t_due, 2)
+            'due': round(t_earned - t_paid, 2)
         })
 
-    # 7. Dropdown List
     all_sellers = User.objects.filter(role__in=['OWNER', 'INVESTOR']).order_by('username')
-
-    # 8. Owner Income
     owner_net_income = Sale.objects.aggregate(total=Sum('owner_profit_amount'))['total'] or 0
 
-    # 9. Personal Wallet & Alerts
+    # --- NEW AI / CHAMPION LOGIC ---
+    
+    # 1. Calculate GLOBAL Champion (Store-wide best seller)
+    global_stat = Sale.objects.values('product__name').annotate(total_qty=Sum('quantity')).order_by('-total_qty').first()
+    global_champion = global_stat['product__name'] if global_stat else "No Sales Yet"
+
+    # 2. Calculate PERSONAL Champion (Logged-in user's best seller)
+    my_stat = Sale.objects.filter(product__investor=user).values('product__name').annotate(total_qty=Sum('quantity')).order_by('-total_qty').first()
+    my_champion = my_stat['product__name'] if my_stat else "No Sales Yet"
+
+    # Personal Wallet (Investor)
     my_earned = 0
     my_paid = 0
     my_due = 0
-    my_predicted_product = "N/A"
-    pending_count = 0
-
+    
     if user.role == 'INVESTOR':
         my_earned = Sale.objects.filter(product__investor=user).aggregate(total=Sum('investor_profit_amount'))['total'] or 0
         my_paid = user.payouts.aggregate(total=Sum('amount'))['total'] or 0
         my_due = my_earned - my_paid
-        my_predicted_product = get_predicted_top_product(user)
     
+    pending_count = 0
     if user.role == 'OWNER':
         pending_count = ProductChangeRequest.objects.filter(status='PENDING').count()
 
@@ -102,8 +103,11 @@ def dashboard(request):
         'total_earned': round(my_earned, 2),
         'total_paid': round(my_paid, 2),
         'due': round(my_due, 2),
-        'predicted_product': my_predicted_product,
         'pending_approvals': pending_count,
+        
+        # Pass the calculated stats
+        'global_champion': global_champion,
+        'my_champion': my_champion
     }
 
     return render(request, 'store/dashboard.html', context)

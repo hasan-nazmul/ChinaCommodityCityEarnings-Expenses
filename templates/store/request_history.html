@@ -1,55 +1,64 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12 d-flex justify-content-between align-items-center">
-        <div>
-            <h3 class="fw-bold mb-0"><i class="bi bi-clock-history me-2"></i>Request History</h3>
-            <p class="text-muted mb-0">Track the status of your inventory updates.</p>
-        </div>
-        <a href="{% url 'inventory_list' %}" class="btn btn-outline-secondary btn-sm shadow-sm">
+<div class="row mb-4 align-items-end">
+    <div class="col-md-6">
+        <h3 class="fw-bold mb-1 text-dark"><i class="bi bi-clock-history me-2 text-primary"></i>Request History</h3>
+        <p class="text-muted small mb-0">Track the status of your inventory updates.</p>
+    </div>
+    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+        <a href="{% url 'inventory_list' %}" class="btn btn-white border shadow-sm fw-bold text-secondary">
             <i class="bi bi-arrow-left me-1"></i> Back to Inventory
         </a>
     </div>
 </div>
 
-<div class="card shadow-sm border-0">
+<div class="card shadow-sm border-0 overflow-hidden">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="bg-light">
-                    <tr class="text-uppercase small text-secondary">
-                        <th class="ps-4 py-3">Date</th>
-                        <th>Type</th>
-                        <th>Product Name</th>
-                        <th>Proposed Price</th>
-                        <th>Status</th>
+                    <tr>
+                        <th class="ps-4 py-3 text-uppercase text-secondary small fw-bold">Date Submitted</th>
+                        <th class="text-uppercase text-secondary small fw-bold">Request Type</th>
+                        <th class="text-uppercase text-secondary small fw-bold">Product Name</th>
+                        <th class="text-uppercase text-secondary small fw-bold">Proposed Price</th>
+                        <th class="text-end pe-4 text-uppercase text-secondary small fw-bold">Status</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in history %}
                     <tr>
-                        <td class="ps-4 text-muted small">{{ item.created_at|date:"M d, Y H:i" }}</td>
+                        <td class="ps-4 text-muted small fw-medium">
+                            {{ item.created_at|date:"M d, Y" }} <br>
+                            <span class="text-muted opacity-75">{{ item.created_at|date:"H:i" }}</span>
+                        </td>
                         <td>
                             {% if item.request_type == 'NEW' %}
-                                <span class="badge bg-light text-primary border border-primary border-opacity-25">New Listing</span>
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10 px-3 py-2 rounded-pill">
+                                    <i class="bi bi-plus-circle me-1"></i> New Item
+                                </span>
                             {% else %}
-                                <span class="badge bg-light text-dark border">Update Item</span>
+                                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill">
+                                    <i class="bi bi-pencil me-1"></i> Edit Item
+                                </span>
                             {% endif %}
                         </td>
-                        <td class="fw-bold">{{ item.name }}</td>
-                        <td>${{ item.selling_price }}</td>
                         <td>
+                            <span class="fw-bold text-dark">{{ item.name }}</span>
+                        </td>
+                        <td class="fw-bold text-dark font-monospace">${{ item.selling_price }}</td>
+                        <td class="text-end pe-4">
                             {% if item.status == 'PENDING' %}
-                                <span class="badge bg-warning text-dark rounded-pill px-3">
+                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 rounded-pill px-3 py-2">
                                     <i class="bi bi-hourglass-split me-1"></i> Pending
                                 </span>
                             {% elif item.status == 'APPROVED' %}
-                                <span class="badge bg-success rounded-pill px-3">
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-2">
                                     <i class="bi bi-check-circle me-1"></i> Approved
                                 </span>
                             {% else %}
-                                <span class="badge bg-danger rounded-pill px-3">
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-2">
                                     <i class="bi bi-x-circle me-1"></i> Rejected
                                 </span>
                             {% endif %}
@@ -57,9 +66,14 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">
-                            <i class="bi bi-inbox display-4 d-block mb-3 opacity-25"></i>
-                            You haven't made any requests yet.
+                        <td colspan="5" class="text-center py-5">
+                            <div class="py-4">
+                                <div class="bg-light rounded-circle d-inline-flex p-4 mb-3 text-secondary">
+                                    <i class="bi bi-inbox display-4"></i>
+                                </div>
+                                <h5 class="fw-bold text-dark">No History Found</h5>
+                                <p class="text-muted small mb-0">You haven't submitted any requests yet.</p>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}

@@ -2,64 +2,90 @@
 
 {% block content %}
 <!-- Page Header -->
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-4 border-bottom">
+<div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h2 class="h2 fw-bold text-dark">Dashboard</h2>
-        <p class="text-muted small">
+        <h2 class="fw-bold text-dark mb-1">Dashboard</h2>
+        <p class="text-muted small mb-0">
             Welcome back, <strong>{{ user.username }}</strong> 
-            <span class="badge bg-secondary rounded-pill ms-2" style="font-weight: 400; font-size: 0.8rem;">
-                {{ user.get_role_display }}
-            </span>
         </p>
+    </div>
+    <div>
+        <span class="badge bg-white text-secondary border shadow-sm rounded-pill px-3 py-2 fw-bold">
+            <i class="bi bi-person-badge me-1"></i> {{ user.get_role_display }}
+        </span>
     </div>
 </div>
 
+<!-- ALERT: Pending Approvals (Owner Only) -->
 {% if is_owner and pending_approvals > 0 %}
-<div class="alert alert-warning border-0 shadow-sm d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <i class="bi bi-exclamation-circle-fill me-2"></i>
-        You have <strong>{{ pending_approvals }} pending requests</strong> from investors.
+<div class="alert alert-warning border-0 shadow-sm rounded-3 d-flex justify-content-between align-items-center mb-4 px-4 py-3">
+    <div class="d-flex align-items-center">
+        <div class="bg-warning bg-opacity-25 text-warning rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+            <i class="bi bi-bell-fill"></i>
+        </div>
+        <div>
+            <h6 class="fw-bold mb-0 text-dark">Action Required</h6>
+            <p class="mb-0 small text-muted">You have <strong>{{ pending_approvals }} pending inventory requests</strong>.</p>
+        </div>
     </div>
-    <a href="{% url 'admin_approval_list' %}" class="btn btn-dark btn-sm fw-bold">Review Now</a>
+    <a href="{% url 'admin_approval_list' %}" class="btn btn-dark btn-sm fw-bold px-3 rounded-pill">Review Now</a>
 </div>
 {% endif %}
 
 <!-- ========================== -->
-<!-- SECTION 0: GLOBAL SALES STATS (Visible to Everyone) -->
+<!-- SECTION 0: GLOBAL SALES STATS -->
 <!-- ========================== -->
-<div class="row mb-4">
-    <div class="col-12">
-        <h6 class="text-uppercase text-secondary small fw-bold mb-3">Today's Sales Breakdown (Revenue)</h6>
-    </div>
+<h6 class="text-uppercase text-secondary small fw-bold mb-3 ls-1">Today's Revenue</h6>
+<div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="card shadow-sm border-0 border-start border-4 border-success">
-            <div class="card-body">
-                <small class="text-muted text-uppercase">Cash</small>
-                <h4 class="mb-0 fw-bold text-dark">${{ payment_stats.cash }}</h4>
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="bg-success bg-opacity-10 text-success p-3 rounded-circle me-3">
+                    <i class="bi bi-cash-stack fs-4"></i>
+                </div>
+                <div>
+                    <p class="text-muted small text-uppercase mb-0 fw-bold">Cash</p>
+                    <h4 class="mb-0 fw-bold text-dark">${{ payment_stats.cash }}</h4>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card shadow-sm border-0 border-start border-4 border-info">
-            <div class="card-body">
-                <small class="text-muted text-uppercase">Online / Transfer</small>
-                <h4 class="mb-0 fw-bold text-dark">${{ payment_stats.online }}</h4>
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="bg-warning bg-opacity-10 text-warning p-3 rounded-circle me-3">
+                    <i class="bi bi-credit-card-2-front fs-4"></i>
+                </div>
+                <div>
+                    <p class="text-muted small text-uppercase mb-0 fw-bold">Card</p>
+                    <h4 class="mb-0 fw-bold text-dark">${{ payment_stats.card }}</h4>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card shadow-sm border-0 border-start border-4 border-warning">
-            <div class="card-body">
-                <small class="text-muted text-uppercase">Card</small>
-                <h4 class="mb-0 fw-bold text-dark">${{ payment_stats.card }}</h4>
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="bg-info bg-opacity-10 text-info p-3 rounded-circle me-3">
+                    <i class="bi bi-phone fs-4"></i>
+                </div>
+                <div>
+                    <p class="text-muted small text-uppercase mb-0 fw-bold">Online</p>
+                    <h4 class="mb-0 fw-bold text-dark">${{ payment_stats.online }}</h4>
+                </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card shadow-sm border-0 bg-dark text-white">
-            <div class="card-body">
-                <small class="text-white-50 text-uppercase">Total Sales</small>
-                <h4 class="mb-0 fw-bold text-white">${{ payment_stats.total }}</h4>
+        <div class="card shadow-sm border-0 h-100 bg-dark text-white" style="background: linear-gradient(145deg, #1e293b, #0f172a);">
+            <div class="card-body d-flex align-items-center">
+                <div class="bg-white bg-opacity-10 text-white p-3 rounded-circle me-3">
+                    <i class="bi bi-wallet2 fs-4"></i>
+                </div>
+                <div>
+                    <p class="text-white-50 small text-uppercase mb-0 fw-bold">Total Sales</p>
+                    <h4 class="mb-0 fw-bold text-white">${{ payment_stats.total }}</h4>
+                </div>
             </div>
         </div>
     </div>
@@ -70,61 +96,108 @@
 <!-- ========================== -->
 <div class="row mb-4">
     
-    <!-- CASE A: IF OWNER -->
+        <!-- CASE A: OWNER VIEW -->
     {% if is_owner %}
     <div class="col-12 mb-4">
-        <!-- OWNER INCOME CARD -->
-        <div class="card bg-success text-white shadow-sm border-0">
-            <div class="card-body d-flex justify-content-between align-items-center p-4">
-                <div>
-                    <h6 class="text-uppercase text-white-50 mb-1">My Facility Net Income</h6>
-                    <h2 class="display-6 fw-bold mb-0">${{ owner_net_income }}</h2>
-                    <small class="text-white-50">Total profit share accumulated from all sales.</small>
+        <div class="row g-4 h-100">
+            
+                        <!-- 1. Owner Income Card (50% Width) -->
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm overflow-hidden text-white h-100" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
+                    <div class="card-body p-4 d-flex justify-content-between align-items-center position-relative">
+                        <div style="z-index: 1;">
+                            <h6 class="text-uppercase text-white-50 mb-1 fw-bold">My Facility Net Income</h6>
+                            <h2 class="display-5 fw-bold mb-0">${{ owner_net_income }}</h2>
+                            <small class="text-white-50">Accumulated profit share.</small>
+                        </div>
+                        <!-- FIXED ICON: translate(-15%) pulls it left, inside the box -->
+                        <i class="bi bi-graph-up-arrow position-absolute end-0 bottom-0 text-white opacity-25" style="font-size: 6rem; transform: translate(-15%, 10%);"></i>
+                    </div>
                 </div>
-                <i class="bi bi-bank display-3 text-white-50"></i>
             </div>
+            
+            <!-- 2. Global AI Card (25% Width) -->
+            <div class="col-lg-3">
+                <div class="card shadow-sm border-0 overflow-hidden text-white h-100" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);">
+                    <div class="card-body p-4 position-relative d-flex flex-column justify-content-center">
+                        <div style="z-index: 1;">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge border border-white text-white" style="background-color: rgba(255, 255, 255, 0.2); font-size: 0.65rem;">GLOBAL LEADER</span>
+                            </div>
+                            <!-- Shows STORE WIDE Winner -->
+                            <h5 class="mb-0 fw-bold text-warning">{{ global_champion }}</h5>
+                            <p class="text-white-50 mb-0 mt-1 small" style="line-height: 1.2;">Most popular item in the entire mall.</p>
+                        </div>
+                        <i class="bi bi-globe position-absolute end-0 bottom-0 text-white opacity-25 me-2 mb-2" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Personal AI Card (25% Width) -->
+            <div class="col-lg-3">
+                <div class="card shadow-sm border-0 overflow-hidden text-white h-100" style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);">
+                    <div class="card-body p-4 position-relative d-flex flex-column justify-content-center">
+                        <div style="z-index: 1;">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge border border-white text-white" style="background-color: rgba(255, 255, 255, 0.2); font-size: 0.65rem;">MY BEST</span>
+                            </div>
+                            <!-- Shows OWNER Inventory Winner -->
+                            <h5 class="mb-0 fw-bold text-white">{{ my_champion }}</h5>
+                            <p class="text-white-50 mb-0 mt-1 small" style="line-height: 1.2;">Top performing product from <strong>your</strong> stock.</p>
+                        </div>
+                        <i class="bi bi-trophy position-absolute end-0 bottom-0 text-white opacity-25 me-2 mb-2" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <div class="col-md-12">
+    <!-- Investor Accounts Table (Owner) -->
+    <div class="col-12">
         <div class="card shadow-sm border-0 rounded-3">
-            <div class="card-header bg-white border-bottom-0 pt-3 pb-2">
-                <h5 class="m-0 text-primary">
-                    <i class="bi bi-wallet2 me-2"></i>Payable Accounts (Investors)
-                </h5>
+            <div class="card-header bg-white pt-4 px-4 border-bottom-0">
+                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-people-fill me-2 text-primary"></i>Investor Accounts</h5>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light">
-                            <tr class="text-secondary small text-uppercase">
-                                <th class="ps-4">Investor</th>
-                                <th>Total Share</th>
-                                <th>Already Paid</th>
-                                <th>Balance Due</th>
-                                <th class="text-end pe-4">Action</th>
+                            <tr>
+                                <th class="ps-4 text-uppercase text-secondary small fw-bold">Investor</th>
+                                <th class="text-uppercase text-secondary small fw-bold">Total Share</th>
+                                <th class="text-uppercase text-secondary small fw-bold">Paid</th>
+                                <th class="text-uppercase text-secondary small fw-bold">Status</th>
+                                <th class="text-end pe-4 text-uppercase text-secondary small fw-bold">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for f in financials %}
                             <tr>
-                                <td class="ps-4 fw-bold text-dark">{{ f.investor.username }}</td>
-                                <td class="text-secondary">${{ f.earned }}</td>
-                                <td class="text-success">${{ f.paid }}</td>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-light rounded-circle text-secondary fw-bold d-flex justify-content-center align-items-center me-2" style="width: 32px; height: 32px;">
+                                            {{ f.investor.username|first|upper }}
+                                        </div>
+                                        <span class="fw-bold text-dark">{{ f.investor.username }}</span>
+                                    </div>
+                                </td>
+                                <td class="text-secondary fw-medium">${{ f.earned }}</td>
+                                <td class="text-success fw-bold">${{ f.paid }}</td>
                                 <td>
                                     {% if f.due > 0 %}
-                                        <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-2 rounded-pill">
+                                        <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3">
                                             ${{ f.due }} Due
                                         </span>
                                     {% else %}
-                                        <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">
+                                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">
                                             Settled
                                         </span>
                                     {% endif %}
                                 </td>
                                 <td class="text-end pe-4">
-                                    <a href="{% url 'pay_investor' f.investor.id %}" class="btn btn-sm btn-outline-dark rounded-pill px-3">
-                                        <i class="bi bi-cash-stack me-1"></i> Pay
+                                    <a href="{% url 'pay_investor' f.investor.id %}" class="btn btn-sm btn-dark rounded-pill px-3 fw-bold">
+                                        Pay
                                     </a>
                                 </td>
                             </tr>
@@ -140,10 +213,11 @@
         </div>
     </div>
 
-    <!-- CASE B: IF INVESTOR -->
+    <!-- CASE B: INVESTOR VIEW -->
     {% else %}
     <div class="col-12">
         <div class="row g-3">
+            <!-- 3 Small Financial Cards -->
             <div class="col-md-4">
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body d-flex align-items-center">
@@ -157,7 +231,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="col-md-4">
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body d-flex align-items-center">
@@ -171,7 +244,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="col-md-4">
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body d-flex align-items-center">
@@ -185,19 +257,38 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-    
-    <div class="col-12 mt-4">
-        <div class="card shadow-sm border-0 bg-primary text-white" style="background: linear-gradient(45deg, #4e54c8, #8f94fb);">
-            <div class="card-body d-flex align-items-center justify-content-between px-4 py-3">
-                <div>
-                    <h6 class="text-uppercase text-white-50 mb-1" style="font-size: 0.8rem; letter-spacing: 1px;">AI Market Intelligence 🤖</h6>
-                    <h3 class="mb-0">Top Trending Product: <span class="fw-bold text-warning">{{ predicted_product }}</span></h3>
-                    <small class="text-white-50">Based on sales velocity from the last 30 days.</small>
+            
+            <!-- NEW: SPLIT AI CARDS (Global vs Personal) -->
+            <div class="col-md-6 mt-4">
+                <div class="card shadow-sm border-0 overflow-hidden text-white h-100" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);">
+                    <div class="card-body p-4 position-relative">
+                        <div style="z-index: 1;">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge border border-white text-white me-2" style="background-color: rgba(255, 255, 255, 0.2);">GLOBAL LEADER</span>
+                            </div>
+                            <h4 class="mb-0 fw-bold text-warning">{{ global_champion }}</h4>
+                            <p class="text-white-50 mb-0 mt-1 small">Best selling product store-wide.</p>
+                        </div>
+                        <i class="bi bi-globe position-absolute end-0 top-50 translate-middle-y text-white opacity-25 me-3" style="font-size: 3.5rem;"></i>
+                    </div>
                 </div>
-                <i class="bi bi-graph-up-arrow display-4 text-white-50"></i>
             </div>
+
+            <div class="col-md-6 mt-4">
+                <div class="card shadow-sm border-0 overflow-hidden text-white h-100" style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);">
+                    <div class="card-body p-4 position-relative">
+                        <div style="z-index: 1;">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge border border-white text-white me-2" style="background-color: rgba(255, 255, 255, 0.2);">MY BEST PERFORMER</span>
+                            </div>
+                            <h4 class="mb-0 fw-bold text-white">{{ my_champion }}</h4>
+                            <p class="text-white-50 mb-0 mt-1 small">Your top selling item.</p>
+                        </div>
+                        <i class="bi bi-trophy position-absolute end-0 top-50 translate-middle-y text-white opacity-25 me-3" style="font-size: 3.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
     {% endif %}
@@ -211,20 +302,14 @@
     <div class="col-lg-8">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-white border-bottom-0 pt-4 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                
-                <!-- Title -->
                 <h5 class="mb-0 fw-bold text-dark">
-                    <i class="bi bi-box-seam me-2 text-secondary"></i>
+                    <i class="bi bi-box-seam-fill me-2 text-primary"></i>
                     {% if is_owner %}Full Inventory{% else %}My Inventory{% endif %}
                 </h5>
 
-                <!-- ACTIONS: Filter & Add Button -->
                 <div class="d-flex align-items-center gap-2">
-                    
-                    <!-- FILTER DROPDOWN (Inside Header) -->
                     <form method="GET" class="d-flex align-items-center">
-                        <span class="text-muted small me-2">Filter:</span>
-                        <select name="investor" class="form-select form-select-sm border-secondary text-secondary shadow-none" style="max-width: 150px;" onchange="this.form.submit()">
+                        <select name="investor" class="form-select form-select-sm border-secondary-subtle text-secondary shadow-none fw-bold" style="max-width: 150px;" onchange="this.form.submit()">
                             <option value="all" {% if current_filter == 'all' %}selected{% endif %}>Show All</option>
                             {% for seller in sellers_list %}
                             <option value="{{ seller.id }}" {% if current_filter == seller.id %}selected{% endif %}>
@@ -233,10 +318,8 @@
                             {% endfor %}
                         </select>
                     </form>
-
-                    <!-- ADD BUTTON -->
-                    <a href="{% url 'add_product' %}" class="btn btn-sm btn-primary rounded-pill px-3">
-                        <i class="bi bi-plus-lg"></i> Add New
+                    <a href="{% url 'add_product' %}" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold">
+                        <i class="bi bi-plus-lg"></i> Add
                     </a>
                 </div>
             </div>
@@ -245,33 +328,36 @@
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-light">
-                            <tr class="text-secondary small text-uppercase">
-                                <th class="ps-4 py-3">ID</th>
-                                <th>Name</th>
-                                <th>Stock Status</th>
-                                <th>Price</th>
-                                {% if is_owner %}<th>Owner</th>{% endif %}
+                            <tr>
+                                <th class="ps-4 py-3 text-uppercase text-secondary small fw-bold">Product</th>
+                                <th class="text-uppercase text-secondary small fw-bold">Stock</th>
+                                <th class="text-uppercase text-secondary small fw-bold">Price</th>
+                                {% if is_owner %}<th class="text-uppercase text-secondary small fw-bold">Owner</th>{% endif %}
                             </tr>
                         </thead>
                         <tbody>
-                            {% for p in products %}
-                            <tr class="{% if p.quantity <= p.low_stock_threshold %}bg-danger bg-opacity-10{% endif %}">
-                                <td class="ps-4 fw-bold text-secondary">{{ p.product_id }}</td>
-                                <td class="fw-bold text-dark">{{ p.name }}</td>
+                            {% for p in products|slice:":6" %}
+                            <tr>
+                                <td class="ps-4">
+                                    <span class="fw-bold text-dark d-block">{{ p.name }}</span>
+                                    <small class="text-muted font-monospace">{{ p.product_id }}</small>
+                                </td>
                                 <td>
                                     {% if p.quantity <= p.low_stock_threshold %}
-                                        <span class="badge rounded-pill bg-danger text-white px-2">
-                                            {{ p.quantity }} (Low)
+                                        <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2">
+                                            {{ p.quantity }} Low
                                         </span>
                                     {% else %}
-                                        <span class="badge rounded-pill bg-success bg-opacity-10 text-success px-2 border border-success border-opacity-25">
+                                        <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2">
                                             {{ p.quantity }} In Stock
                                         </span>
                                     {% endif %}
                                 </td>
-                                <td>${{ p.selling_price }}</td>
+                                <td class="fw-bold text-dark">${{ p.selling_price }}</td>
                                 {% if is_owner %}
-                                    <td><small class="text-muted"><i class="bi bi-person me-1"></i>{{ p.investor.username }}</small></td>
+                                    <td>
+                                        <span class="badge bg-light text-secondary border fw-normal">{{ p.investor.username }}</span>
+                                    </td>
                                 {% endif %}
                             </tr>
                             {% empty %}
@@ -283,7 +369,7 @@
             </div>
             <div class="card-footer bg-white border-0 text-center pb-3 pt-0">
                 <hr class="text-muted opacity-25 mt-0 mb-3">
-                <a href="{% url 'inventory_list' %}" class="text-decoration-none small text-primary fw-bold">
+                <a href="{% url 'inventory_list' %}" class="text-decoration-none small fw-bold text-primary">
                     View Full Inventory <i class="bi bi-arrow-right ms-1"></i>
                 </a>
             </div>
@@ -295,28 +381,29 @@
         <div class="card shadow-sm border-0 h-100">
             <div class="card-header bg-white border-bottom-0 pt-4 px-4">
                 <h5 class="mb-0 fw-bold text-dark">
-                    <i class="bi bi-activity me-2 text-secondary"></i>Recent Sales
+                    <i class="bi bi-activity me-2 text-primary"></i>Recent Sales
                 </h5>
             </div>
             <div class="card-body p-0">
                 <ul class="list-group list-group-flush">
                     {% for sale in recent_sales %}
                     <li class="list-group-item border-0 px-4 py-3 d-flex align-items-center">
-                        <div class="bg-light rounded-circle p-2 me-3 text-secondary">
-                            <i class="bi bi-cart-check"></i>
+                        <div class="bg-light rounded-circle p-2 me-3 text-secondary d-flex justify-content-center align-items-center" style="width: 40px; height: 40px;">
+                            <i class="bi bi-bag-check-fill"></i>
                         </div>
                         <div class="flex-grow-1">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0 fw-bold text-dark">{{ sale.product.name }}</h6>
-                                <span class="badge bg-light text-muted border text-dark">{{ sale.date|date:"M d" }}</span>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-0 fw-bold text-dark">{{ sale.product.name }}</h6>
+                                    <small class="text-muted d-block" style="font-size: 0.75rem;">
+                                        {{ sale.sold_by.username }} &bull; {{ sale.date|timesince }} ago
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="fw-bold text-success d-block">+${{ sale.total_amount }}</span>
+                                    <span class="badge bg-light text-secondary border px-1" style="font-size: 0.65rem;">x{{ sale.quantity }}</span>
+                                </div>
                             </div>
-                            <div class="d-flex justify-content-between mt-1">
-                                <small class="text-muted">Qty: {{ sale.quantity }}</small>
-                                <span class="fw-bold text-success">+ ${{ sale.total_amount }}</span>
-                            </div>
-                            <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
-                                Sold by {{ sale.sold_by.username }}
-                            </small>
                         </div>
                     </li>
                     {% empty %}
@@ -327,8 +414,8 @@
                     {% endfor %}
                 </ul>
                 <div class="card-footer bg-white border-0 text-center pb-3">
-                    <a href="{% url 'sales_history' %}" class="text-decoration-none small text-primary fw-bold">
-                        View All History <i class="bi bi-arrow-right"></i>
+                    <a href="{% url 'sales_history' %}" class="text-decoration-none small fw-bold text-primary">
+                        View All History <i class="bi bi-arrow-right ms-1"></i>
                     </a>
                 </div>
             </div>
