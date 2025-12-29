@@ -135,3 +135,41 @@ class Payout(models.Model):
 
     def __str__(self):
         return f"Paid {self.amount} to {self.investor.username}"
+    
+# store/models.py
+
+# store/models.py
+
+class ProductChangeRequest(models.Model):
+    REQUEST_TYPES = [
+        ('NEW', 'New Product Listing'),
+        ('EDIT', 'Edit Existing Product'),
+    ]
+    
+    # NEW: Status Choices
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending Approval'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+    ]
+
+    requester = models.ForeignKey(User, on_delete=models.CASCADE)
+    request_type = models.CharField(max_length=10, choices=REQUEST_TYPES)
+    target_product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True, blank=True)
+    
+    # Data fields
+    name = models.CharField(max_length=200)
+    quantity = models.IntegerField()
+    buying_price = models.DecimalField(max_digits=10, decimal_places=2)
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2)
+    low_stock_threshold = models.IntegerField(default=5)
+    
+    # NEW: Status Field (Replaces is_approved)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # NEW: Optional rejection reason
+    admin_note = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.get_request_type_display()} - {self.status}"

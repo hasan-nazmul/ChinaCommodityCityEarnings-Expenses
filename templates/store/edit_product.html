@@ -1,0 +1,71 @@
+{% extends 'base.html' %} {% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow-sm border-0 rounded-3">
+      <div class="card-header bg-warning bg-opacity-10 border-bottom-0 pt-4 pb-0">
+        <h4 class="text-dark mb-0 fw-bold">
+          <i class="bi bi-pencil-square me-2"></i>Edit Product
+        </h4>
+        <p class="text-muted small mt-1">
+          Editing ID: <span class="badge bg-dark font-monospace">{{ product.product_id }}</span>
+        </p>
+      </div>
+      <div class="card-body p-4">
+        <form method="POST">
+          {% csrf_token %}
+
+          <!-- 1. General Info -->
+          <div class="mb-4">
+            <label class="form-label fw-bold text-secondary text-uppercase small">Product Details</label>
+            <div class="mb-3">
+              <label class="form-label">Product Name</label>
+              {{ form.name }}
+            </div>
+            <div class="row">
+              <div class="col-md-6">
+                <label class="form-label">Quantity</label>
+                {{ form.quantity }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Low Stock Alert at</label>
+                {{ form.low_stock_threshold }}
+              </div>
+            </div>
+          </div>
+
+          <hr class="text-muted opacity-25 my-4" />
+
+          <!-- 2. Financials -->
+          <div class="mb-4">
+            <label class="form-label fw-bold text-secondary text-uppercase small">Pricing</label>
+            <div class="row">
+              <div class="col-md-6">
+                <label class="form-label">Buying Price (Cost)</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light border-end-0">$</span>
+                  {{ form.buying_price }}
+                </div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Selling Price</label>
+                <div class="input-group">
+                  <span class="input-group-text bg-light border-end-0">$</span>
+                  {{ form.selling_price }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div class="d-flex justify-content-between mt-4">
+            <a href="{% url 'inventory_list' %}" class="btn btn-light text-muted">Cancel</a>
+            <button type="submit" class="btn btn-warning shadow-sm fw-bold px-4">
+              <i class="bi bi-check-lg me-2"></i> Update Product
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

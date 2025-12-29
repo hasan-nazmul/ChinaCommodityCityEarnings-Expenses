@@ -14,6 +14,16 @@
     </div>
 </div>
 
+{% if is_owner and pending_approvals > 0 %}
+<div class="alert alert-warning border-0 shadow-sm d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <i class="bi bi-exclamation-circle-fill me-2"></i>
+        You have <strong>{{ pending_approvals }} pending requests</strong> from investors.
+    </div>
+    <a href="{% url 'admin_approval_list' %}" class="btn btn-dark btn-sm fw-bold">Review Now</a>
+</div>
+{% endif %}
+
 <!-- ========================== -->
 <!-- SECTION 0: GLOBAL SALES STATS (Visible to Everyone) -->
 <!-- ========================== -->
@@ -270,6 +280,12 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+            <div class="card-footer bg-white border-0 text-center pb-3 pt-0">
+                <hr class="text-muted opacity-25 mt-0 mb-3">
+                <a href="{% url 'inventory_list' %}" class="text-decoration-none small text-primary fw-bold">
+                    View Full Inventory <i class="bi bi-arrow-right ms-1"></i>
+                </a>
             </div>
         </div>
     </div>

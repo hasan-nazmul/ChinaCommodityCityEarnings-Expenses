@@ -1,5 +1,6 @@
 import json
 import uuid
+import csv
 from decimal import Decimal
 from datetime import timedelta
 from django.utils import timezone
@@ -8,15 +9,13 @@ from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Q, Sum, Count, Max
+from django.db.models import Q, F, Sum, Count, Max
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 
-from .models import Product, Sale, User, Payout, Customer
+from .models import *
 from .forms import ProductForm
 from .analytics import get_predicted_top_product
-import csv
-from django.http import HttpResponse
 
 # ==========================================
 # 1. DASHBOARD & ANALYTICS
@@ -28,18 +27,18 @@ def dashboard(request):
     # 1. Handle Filters
     filter_investor_id = request.GET.get('investor')
     
-    # 2. Base Queries (Prepare them, but DO NOT slice yet)
+    # 2. Base Queries
     products_query = Product.objects.all()
     sales_query = Sale.objects.all().order_by('-date')
     
-    # 3. Apply Filter (BEFORE slicing)
+    # 3. Apply Filter
     if filter_investor_id and filter_investor_id != 'all':
         products_query = products_query.filter(investor_id=filter_investor_id)
         sales_query = sales_query.filter(product__investor_id=filter_investor_id)
 
-    # 4. Now execute the queries and Slice
+    # 4. Execute and Slice
     products = products_query
-    sales_history = sales_query[:50] # <--- Slice happens LAST
+    sales_history = sales_query[:50]
 
     # 5. Global Stats
     cash_income = Sale.objects.filter(payment_method='CASH').aggregate(t=Sum('total_amount'))['t'] or 0
@@ -75,17 +74,21 @@ def dashboard(request):
     # 8. Owner Income
     owner_net_income = Sale.objects.aggregate(total=Sum('owner_profit_amount'))['total'] or 0
 
-    # 9. Personal Wallet
+    # 9. Personal Wallet & Alerts
     my_earned = 0
     my_paid = 0
     my_due = 0
     my_predicted_product = "N/A"
+    pending_count = 0
 
     if user.role == 'INVESTOR':
         my_earned = Sale.objects.filter(product__investor=user).aggregate(total=Sum('investor_profit_amount'))['total'] or 0
         my_paid = user.payouts.aggregate(total=Sum('amount'))['total'] or 0
         my_due = my_earned - my_paid
         my_predicted_product = get_predicted_top_product(user)
+    
+    if user.role == 'OWNER':
+        pending_count = ProductChangeRequest.objects.filter(status='PENDING').count()
 
     context = {
         'products': products,
@@ -99,7 +102,8 @@ def dashboard(request):
         'total_earned': round(my_earned, 2),
         'total_paid': round(my_paid, 2),
         'due': round(my_due, 2),
-        'predicted_product': my_predicted_product
+        'predicted_product': my_predicted_product,
+        'pending_approvals': pending_count,
     }
 
     return render(request, 'store/dashboard.html', context)
@@ -112,24 +116,154 @@ def add_product(request):
     if request.method == 'POST':
         form = ProductForm(request.POST)
         if form.is_valid():
-            product = form.save(commit=False)
-            product.investor = request.user
             
+            # CASE 1: OWNER (Direct Save)
             if request.user.role == 'OWNER':
+                product = form.save(commit=False)
+                product.investor = request.user
                 product.owner_split_percent = Decimal(100)
                 product.investor_split_percent = Decimal(0)
-            else:
-                if product.owner_split_percent > 100:
-                    product.owner_split_percent = Decimal(100)
-                product.investor_split_percent = Decimal(100) - product.owner_split_percent
+                product.save()
+                messages.success(request, f"Product added directly to inventory.")
             
-            product.save()
-            messages.success(request, f"Product {product.product_id} added successfully!")
-            return redirect('dashboard')
+            # CASE 2: INVESTOR (Create Request)
+            else:
+                ProductChangeRequest.objects.create(
+                    requester=request.user,
+                    request_type='NEW',
+                    name=form.cleaned_data['name'],
+                    quantity=form.cleaned_data['quantity'],
+                    buying_price=form.cleaned_data['buying_price'],
+                    selling_price=form.cleaned_data['selling_price'],
+                    low_stock_threshold=form.cleaned_data['low_stock_threshold']
+                )
+                messages.info(request, "Request submitted! The Owner must approve this before it appears in the store.")
+
+            return redirect('inventory_list')
     else:
         form = ProductForm()
     return render(request, 'store/add_product.html', {'form': form})
 
+@login_required
+def edit_product(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+
+    # Security: Users can only edit their own stuff
+    if request.user.role != 'OWNER' and product.investor != request.user:
+        messages.error(request, "Access Denied.")
+        return redirect('inventory_list')
+
+    if request.method == 'POST':
+        form = ProductForm(request.POST, instance=product)
+        if form.is_valid():
+            
+            # CASE 1: OWNER (Direct Update)
+            if request.user.role == 'OWNER':
+                form.save()
+                messages.success(request, "Product updated successfully.")
+            
+            # CASE 2: INVESTOR (Create Request)
+            else:
+                ProductChangeRequest.objects.create(
+                    requester=request.user,
+                    request_type='EDIT',
+                    target_product=product, # Link to existing item
+                    name=form.cleaned_data['name'],
+                    quantity=form.cleaned_data['quantity'],
+                    buying_price=form.cleaned_data['buying_price'],
+                    selling_price=form.cleaned_data['selling_price'],
+                    low_stock_threshold=form.cleaned_data['low_stock_threshold']
+                )
+                messages.info(request, "Changes submitted for approval.")
+            
+            return redirect('inventory_list')
+    else:
+        form = ProductForm(instance=product)
+
+    return render(request, 'store/edit_product.html', {'form': form, 'product': product})
+
+@login_required
+def inventory_list(request):
+    # 1. Base Query: Get all products + Calculate Margin
+    products = Product.objects.all().select_related('investor').annotate(
+        margin=F('selling_price') - F('buying_price')
+    ).order_by('-created_at')
+    
+    # 2. Get Search & Filter Parameters
+    search_query = request.GET.get('search', '').strip()
+    filter_investor = request.GET.get('investor', '')
+
+    # 3. Apply Search
+    if search_query:
+        products = products.filter(
+            Q(name__icontains=search_query) | 
+            Q(product_id__icontains=search_query)
+        )
+
+    # 4. Apply Owner Filter
+    if filter_investor and filter_investor != 'all':
+        products = products.filter(investor_id=filter_investor)
+
+    # 5. Calculate Total Inventory Value
+    total_inventory_value = sum(p.buying_price * p.quantity for p in products)
+    product_count = products.count()
+
+    # 6. Get Sellers list
+    sellers = User.objects.filter(role__in=['OWNER', 'INVESTOR']).order_by('username')
+
+    context = {
+        'products': products,
+        'sellers': sellers,
+        'search_query': search_query,
+        'current_filter': int(filter_investor) if filter_investor and filter_investor != 'all' else 'all',
+        'total_value': total_inventory_value,
+        'product_count': product_count,
+        'is_owner': request.user.role == 'OWNER'
+    }
+    
+    return render(request, 'store/inventory_list.html', context)
+
+@login_required
+def export_inventory_csv(request):
+    current_time = timezone.localtime(timezone.now()).strftime("%Y-%m-%d_%H-%M")
+    filename = f"inventory_report_{current_time}.csv"
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    writer = csv.writer(response)
+
+    writer.writerow(['Product ID', 'Name', 'Owner', 'Cost Price', 'Selling Price', 'Quantity', 'Stock Status', 'Total Stock Value'])
+
+    products = Product.objects.all().select_related('investor').order_by('-created_at')
+    
+    search_query = request.GET.get('search', '').strip()
+    filter_investor = request.GET.get('investor', '')
+
+    if search_query:
+        products = products.filter(
+            Q(name__icontains=search_query) | 
+            Q(product_id__icontains=search_query)
+        )
+
+    if filter_investor and filter_investor != 'all':
+        products = products.filter(investor_id=filter_investor)
+
+    for p in products:
+        status = "Low Stock" if p.quantity <= p.low_stock_threshold else "In Stock"
+        total_val = p.buying_price * p.quantity
+
+        writer.writerow([
+            p.product_id,
+            p.name,
+            p.investor.username,
+            p.buying_price,
+            p.selling_price,
+            p.quantity,
+            status,
+            total_val
+        ])
+
+    return response
 
 # ==========================================
 # 3. SALES & CART SYSTEM
@@ -223,10 +357,8 @@ def sell_product(request):
 # ==========================================
 @login_required
 def sales_history(request):
-    # Open Visibility: Everyone starts with all sales
     sales = Sale.objects.all().select_related('product', 'sold_by', 'customer').order_by('-date')
 
-    # Apply Investor Filter
     filter_investor_id = request.GET.get('investor')
     if filter_investor_id and filter_investor_id != 'all':
         sales = sales.filter(product__investor_id=filter_investor_id)
@@ -248,8 +380,6 @@ def sales_history(request):
     
     total_revenue = sales.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
     total_count = sales.count()
-    
-    # Dropdown List (Owner + Investors)
     all_sellers = User.objects.filter(role__in=['OWNER', 'INVESTOR']).order_by('username')
 
     return render(request, 'store/sales_history.html', {
@@ -257,10 +387,59 @@ def sales_history(request):
         'total_revenue': round(total_revenue, 2),
         'total_count': total_count,
         'filter_type': filter_type,
-        'sellers_list': all_sellers, # <--- NEW LIST
+        'sellers_list': all_sellers,
         'current_filter': int(filter_investor_id) if filter_investor_id and filter_investor_id != 'all' else 'all',
     })
 
+@login_required
+def export_sales_csv(request):
+    current_time = timezone.localtime(timezone.now()).strftime("%Y-%m-%d_%H-%M")
+    filename = f"sales_report_{current_time}.csv"
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    writer = csv.writer(response)
+    
+    writer.writerow(['Date', 'Transaction ID', 'Product', 'Sold By', 'Customer', 'Qty', 'Total Amount', 'Payment Method'])
+
+    sales = Sale.objects.all().select_related('product', 'sold_by', 'customer').order_by('-date')
+    filter_investor_id = request.GET.get('investor')
+    if filter_investor_id and filter_investor_id != 'all':
+        sales = sales.filter(product__investor_id=filter_investor_id)
+
+    filter_type = request.GET.get('filter')
+    today = timezone.now().date()
+
+    if filter_type == 'today':
+        sales = sales.filter(date__date=today)
+    elif filter_type == 'week':
+        start_date = today - timedelta(days=7)
+        sales = sales.filter(date__date__gte=start_date)
+    elif filter_type == 'month':
+        start_date = today - timedelta(days=30)
+        sales = sales.filter(date__date__gte=start_date)
+    elif filter_type == 'year':
+        start_date = today - timedelta(days=365)
+        sales = sales.filter(date__date__gte=start_date)
+
+    for sale in sales:
+        customer_name = sale.customer.name if sale.customer else (sale.customer_name_text or "Walk-in")
+        
+        # Convert UTC to Local Time before writing
+        local_date = timezone.localtime(sale.date)
+        formatted_date = local_date.strftime("%Y-%m-%d %I:%M %p")
+
+        writer.writerow([
+            formatted_date,
+            sale.transaction_id or "-",
+            sale.product.name,
+            sale.sold_by.username,
+            customer_name,
+            sale.quantity,
+            sale.total_amount,
+            sale.get_payment_method_display(),
+        ])
+
+    return response
 
 # ==========================================
 # 5. USER PROFILE & CUSTOMERS
@@ -327,95 +506,101 @@ def pay_investor(request, investor_id):
             return redirect('dashboard')
     return render(request, 'store/pay_investor.html', {'investor': investor})
 
-@login_required
-def export_sales_csv(request):
-    # 1. Setup the CSV file
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="sales_report.csv"'
-    writer = csv.writer(response)
-    
-    # 2. Write the Header Row
-    writer.writerow(['Date', 'Transaction ID', 'Product', 'Sold By', 'Customer', 'Qty', 'Total Amount', 'Payment Method'])
 
-    # 3. Start with all sales
-    sales = Sale.objects.all().select_related('product', 'sold_by', 'customer').order_by('-date')
-
-    # --- APPLY FILTERS (Same logic as sales_history) ---
-    
-    # A. Filter by Investor/Seller
-    filter_investor_id = request.GET.get('investor')
-    if filter_investor_id and filter_investor_id != 'all':
-        sales = sales.filter(product__investor_id=filter_investor_id)
-
-    # B. Filter by Date Range
-    filter_type = request.GET.get('filter')
-    today = timezone.now().date()
-
-    if filter_type == 'today':
-        sales = sales.filter(date__date=today)
-    elif filter_type == 'week':
-        start_date = today - timedelta(days=7)
-        sales = sales.filter(date__date__gte=start_date)
-    elif filter_type == 'month':
-        start_date = today - timedelta(days=30)
-        sales = sales.filter(date__date__gte=start_date)
-    elif filter_type == 'year':
-        start_date = today - timedelta(days=365)
-        sales = sales.filter(date__date__gte=start_date)
-
-    # 4. Write the Data Rows
-    for sale in sales:
-        # Handle customer name logic safely
-        customer_name = sale.customer.name if sale.customer else (sale.customer_name_text or "Walk-in")
-        
-        writer.writerow([
-            sale.date.strftime("%Y-%m-%d %H:%M:%S"),
-            sale.transaction_id or "-",
-            sale.product.name,
-            sale.sold_by.username,
-            customer_name,
-            sale.quantity,
-            sale.total_amount,
-            sale.get_payment_method_display(),
-        ])
-
-    return response
+# ==========================================
+# 6. APPROVAL SYSTEM & REQUESTS
+# ==========================================
 
 @login_required
-def inventory_list(request):
-    # 1. Start with all products
-    products = Product.objects.all().select_related('investor').order_by('-created_at')
+def admin_approval_list(request):
+    if request.user.role != 'OWNER':
+        return redirect('dashboard')
     
-    # 2. Get Parameters
-    search_query = request.GET.get('search', '').strip()
-    filter_investor = request.GET.get('investor', '')
+    # Only show PENDING requests in the main list
+    pending_requests = ProductChangeRequest.objects.filter(status='PENDING').order_by('-created_at')
+    return render(request, 'store/approval_list.html', {'requests': pending_requests})
 
-    # 3. Apply Search (Checks Name OR Product ID)
-    if search_query:
-        products = products.filter(
-            Q(name__icontains=search_query) | 
-            Q(product_id__icontains=search_query)
+def process_approval(req):
+    """Applies the changes to the live Product table"""
+    if req.request_type == 'NEW':
+        Product.objects.create(
+            investor=req.requester,
+            name=req.name,
+            quantity=req.quantity,
+            buying_price=req.buying_price,
+            selling_price=req.selling_price,
+            low_stock_threshold=req.low_stock_threshold,
+            owner_split_percent=30,
+            investor_split_percent=70
         )
+    elif req.request_type == 'EDIT' and req.target_product:
+        p = req.target_product
+        p.name = req.name
+        p.quantity = req.quantity
+        p.buying_price = req.buying_price
+        p.selling_price = req.selling_price
+        p.low_stock_threshold = req.low_stock_threshold
+        p.save()
 
-    # 4. Apply Owner Filter
-    if filter_investor and filter_investor != 'all':
-        products = products.filter(investor_id=filter_investor)
-
-    # 5. Calculate Total Value of visible inventory (Buying Price * Quantity)
-    total_inventory_value = sum(p.buying_price * p.quantity for p in products)
-    product_count = products.count()
-
-    # 6. Get Sellers list for the dropdown
-    sellers = User.objects.filter(role__in=['OWNER', 'INVESTOR']).order_by('username')
-
-    context = {
-        'products': products,
-        'sellers': sellers,
-        'search_query': search_query,
-        'current_filter': int(filter_investor) if filter_investor and filter_investor != 'all' else 'all',
-        'total_value': total_inventory_value,
-        'product_count': product_count,
-        'is_owner': request.user.role == 'OWNER'
-    }
+@login_required
+def approve_request(request, request_id):
+    if request.user.role != 'OWNER': return redirect('dashboard')
     
-    return render(request, 'store/inventory_list.html', context)
+    req = get_object_or_404(ProductChangeRequest, id=request_id)
+    if req.status == 'PENDING':
+        process_approval(req) # Apply changes
+        req.status = 'APPROVED' # Update Status
+        req.save()
+        messages.success(request, "Request Approved.")
+        
+    return redirect('admin_approval_list')
+
+@login_required
+def reject_request(request, request_id):
+    if request.user.role != 'OWNER': return redirect('dashboard')
+    
+    req = get_object_or_404(ProductChangeRequest, id=request_id)
+    if req.status == 'PENDING':
+        req.status = 'REJECTED' # Update Status
+        req.save()
+        messages.warning(request, "Request Rejected.")
+        
+    return redirect('admin_approval_list')
+
+@login_required
+def approve_all_requests(request):
+    if request.user.role != 'OWNER': return redirect('dashboard')
+    
+    pending = ProductChangeRequest.objects.filter(status='PENDING')
+    count = pending.count()
+    
+    if count > 0:
+        for req in pending:
+            process_approval(req)
+            req.status = 'APPROVED'
+            req.save()
+        messages.success(request, f"✅ Successfully approved all {count} pending requests.")
+    else:
+        messages.info(request, "No pending requests to approve.")
+        
+    return redirect('admin_approval_list')
+
+@login_required
+def reject_all_requests(request):
+    if request.user.role != 'OWNER': return redirect('dashboard')
+    
+    pending = ProductChangeRequest.objects.filter(status='PENDING')
+    count = pending.count()
+    
+    if count > 0:
+        # We use update() for efficiency since we don't need to process logic
+        pending.update(status='REJECTED')
+        messages.warning(request, f"❌ Rejected all {count} pending requests.")
+        
+    return redirect('admin_approval_list')
+
+@login_required
+def my_requests(request):
+    # Show user's history (All statuses)
+    my_history = ProductChangeRequest.objects.filter(requester=request.user).order_by('-created_at')
+    return render(request, 'store/request_history.html', {'history': my_history})

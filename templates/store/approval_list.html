@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <h3 class="fw-bold mb-0"><i class="bi bi-ui-checks me-2"></i>Approvals Center</h3>
+        <p class="text-muted mb-0">Review pending inventory changes from investors.</p>
+    </div>
+    
+    <!-- BULK ACTIONS BUTTONS -->
+    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+        {% if requests %}
+        <div class="btn-group shadow-sm" role="group">
+            <a href="{% url 'approve_all_requests' %}" 
+               class="btn btn-success fw-bold" 
+               onclick="return confirm('Are you sure you want to APPROVE ALL pending requests? This will update the live inventory immediately.')">
+                <i class="bi bi-check-all me-1"></i> Approve All
+            </a>
+            <a href="{% url 'reject_all_requests' %}" 
+               class="btn btn-danger fw-bold" 
+               onclick="return confirm('Are you sure you want to REJECT ALL pending requests?')">
+                <i class="bi bi-x-circle me-1"></i> Reject All
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="ps-4">Request Type</th>
+                        <th>Investor</th>
+                        <th>Product Details</th>
+                        <th>Price Changes</th>
+                        <th>Stock Qty</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in requests %}
+                    <tr>
+                        <td class="ps-4">
+                            {% if req.request_type == 'NEW' %}
+                                <span class="badge bg-primary">NEW ITEM</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">EDIT #{{ req.target_product.product_id }}</span>
+                            {% endif %}
+                            <div class="small text-muted mt-1">{{ req.created_at|date:"M d, H:i" }}</div>
+                        </td>
+                        <td class="fw-bold">{{ req.requester.username }}</td>
+                        <td>
+                            <div class="fw-bold text-dark">{{ req.name }}</div>
+                        </td>
+                        <td>
+                            <div class="small text-muted">Cost: ${{ req.buying_price }}</div>
+                            <div class="small fw-bold text-success">Sell: ${{ req.selling_price }}</div>
+                        </td>
+                        <td class="fw-bold">{{ req.quantity }}</td>
+                        <td class="text-end pe-4">
+                            <div class="btn-group">
+                                <a href="{% url 'approve_request' req.id %}" class="btn btn-sm btn-success" title="Approve">
+                                    <i class="bi bi-check-lg"></i>
+                                </a>
+                                <a href="{% url 'reject_request' req.id %}" class="btn btn-sm btn-danger" title="Reject">
+                                    <i class="bi bi-x-lg"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="bi bi-check-circle display-1 d-block mb-3 opacity-25"></i>
+                            <p class="fs-5">All caught up!</p>
+                            <p class="small">No pending requests found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

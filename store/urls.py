@@ -16,4 +16,14 @@ urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path('sales-history/export/', views.export_sales_csv, name='export_sales_csv'),
     path('inventory/', views.inventory_list, name='inventory_list'),
+    path('inventory/export/', views.export_inventory_csv, name='export_inventory_csv'), 
+    path('inventory/edit/<int:product_id>/', views.edit_product, name='edit_product'),
+    path('approvals/', views.admin_approval_list, name='admin_approval_list'),
+    path('approvals/approve/<int:request_id>/', views.approve_request, name='approve_request'),
+    path('approvals/reject/<int:request_id>/', views.reject_request, name='reject_request'),
+    path('approvals/approve-all/', views.approve_all_requests, name='approve_all_requests'),
+    path('approvals/reject-all/', views.reject_all_requests, name='reject_all_requests'),
+
+    # NEW INVESTOR PATH
+    path('my-requests/', views.my_requests, name='my_requests'),
 ]
